@@ -1,0 +1,13 @@
+{
+  "name": "suivi-projet",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Plateforme de suivi de projet client (PRISMAE).",
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.cjs -i src/input.css -o public/styles.css --minify && tailwindcss -c tailwind.studio.config.cjs -i src/input.css -o public/styles-studio.css --minify",
+    "watch:css": "tailwindcss -c tailwind.config.cjs -i src/input.css -o public/styles.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

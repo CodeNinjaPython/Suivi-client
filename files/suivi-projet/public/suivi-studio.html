@@ -28,29 +28,9 @@
     <meta name="mobile-web-app-capable" content="yes" />
 
     <!-- Style "Studio" (or / cinéma). Variante du style bleu PRISMAE ; choisie par projet dans l'admin. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 
-    <script src="https://cdn.tailwindcss.com"></script>
     <!-- Client Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        studio: {
-                            black: '#0a0a0a', charcoal: '#141414', gold: '#c9a24a',
-                            goldglow: 'rgba(201, 162, 74, 0.4)', cream: '#efe8d8',
-                            muted: '#6b6b6b', border: '#2a2a2a'
-                        }
-                    },
-                    fontFamily: { sans: ['DM Mono', 'monospace'], serif: ['Playfair Display', 'serif'] }
-                }
-            }
-        }
-    </script>
 
     <style>
         /* Grain intégré (SVG inline) — aucune dépendance externe */
@@ -84,6 +64,8 @@
             .pulse-active, .fade-in, .sk { animation: none; opacity:1; transform:none; }
         }
     </style>
+    <link rel="stylesheet" href="fonts.css" />
+    <link rel="stylesheet" href="styles-studio.css" />
 </head>
 
 <body class="loading min-h-screen flex items-center justify-center p-4 sm:p-8 selection:bg-studio-gold selection:text-studio-black">

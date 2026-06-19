@@ -28,15 +28,7 @@
 <meta name="apple-mobile-web-app-title" content="PRISMAE" />
 <meta name="mobile-web-app-capable" content="yes" />
 
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = { theme: { extend: {
-    colors: { bg:'#07090c','bg-soft':'#0e1218', ink:'#f4f1ec','ink-soft':'#a3a8b2','ink-muted':'#6b7280', accent:'#3b9bff','accent-soft':'#9ecbff' },
-    fontFamily: { display:['Syne','sans-serif'], sans:['Manrope','system-ui','sans-serif'] }
-  } } };
-</script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap');
   :root { color-scheme: dark; }
   html { background:#07090c; }
   body {
@@ -51,6 +43,8 @@
   .pulse-dot { animation: dot-pulse 2.6s ease-in-out infinite; }
   @media (prefers-reduced-motion: reduce) { .pulse-dot { animation:none; } }
 </style>
+    <link rel="stylesheet" href="fonts.css" />
+    <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="min-h-screen font-sans text-ink antialiased">
   <main class="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 text-center">

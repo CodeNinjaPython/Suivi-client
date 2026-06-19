@@ -27,36 +27,10 @@
 <meta name="apple-mobile-web-app-title" content="PRISMAE" />
 <meta name="mobile-web-app-capable" content="yes" />
 
-<!-- Tailwind (Play CDN pour la preview ; en prod, utilise le build Tailwind) -->
-<script src="https://cdn.tailwindcss.com"></script>
 <!-- Client Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          bg:          '#07090c',
-          'bg-soft':   '#0e1218',
-          surface:     '#12161d',
-          ink:         '#f4f1ec',
-          'ink-soft':  '#a3a8b2',
-          'ink-muted': '#6b7280',
-          accent:      '#3b9bff',
-          'accent-soft':'#9ecbff',
-        },
-        fontFamily: {
-          display: ['Syne', 'sans-serif'],
-          sans:    ['Manrope', 'system-ui', 'sans-serif'],
-          mono:    ['"DM Mono"', 'monospace'],
-        },
-      },
-    },
-  };
-</script>
 
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap');
 
   :root { color-scheme: dark; }
   html { scroll-behavior: smooth; background: #07090c; }
@@ -170,6 +144,8 @@
     html { scroll-behavior: auto; }
   }
 </style>
+    <link rel="stylesheet" href="fonts.css" />
+    <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body class="loading min-h-screen font-sans text-ink antialiased">

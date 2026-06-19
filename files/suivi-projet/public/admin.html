@@ -6,38 +6,12 @@
 <meta name="theme-color" content="#07090c" />
 <title>Administration — Suivi de projet</title>
 
-<!-- Tailwind (Play CDN pour la preview ; en prod, utilise le build Tailwind) -->
-<script src="https://cdn.tailwindcss.com"></script>
 <!-- Client Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- Génération de QR code (dessiné sur canvas → PNG téléchargeable) -->
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          bg:          '#07090c',
-          'bg-soft':   '#0e1218',
-          surface:     '#12161d',
-          ink:         '#f4f1ec',
-          'ink-soft':  '#a3a8b2',
-          'ink-muted': '#6b7280',
-          accent:      '#3b9bff',
-          'accent-soft':'#9ecbff',
-        },
-        fontFamily: {
-          display: ['Syne', 'sans-serif'],
-          sans:    ['Manrope', 'system-ui', 'sans-serif'],
-          mono:    ['"DM Mono"', 'monospace'],
-        },
-      },
-    },
-  };
-</script>
 
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap');
 
   :root { color-scheme: dark; }
   html { background:#07090c; }
@@ -90,6 +64,8 @@
     background:#3b9bff; box-shadow:0 0 8px #3b9bff;
   }
 </style>
+    <link rel="stylesheet" href="fonts.css" />
+    <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body class="min-h-screen font-sans text-ink antialiased">

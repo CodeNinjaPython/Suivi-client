@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suivi de Production | Studio</title>
+    
+    <!-- Polices Google : Playfair pour l'élégance, DM Mono pour la technicité -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Chargement de Tailwind CSS avec configuration personnalisée -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        studio: {
+                            black: '#0a0a0a',      /* Fond très sombre */
+                            charcoal: '#141414',   /* Fond des cartes */
+                            gold: '#c9a24a',       /* Doré premium */
+                            goldglow: 'rgba(201, 162, 74, 0.4)',
+                            cream: '#efe8d8',      /* Texte clair doux */
+                            muted: '#6b6b6b',      /* Texte secondaire */
+                            border: '#2a2a2a'      /* Bordures subtiles */
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['DM Mono', 'monospace'],
+                        serif: ['Playfair Display', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Effet de grain de film subtil en fond */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/7/76/1k_Dissolve_Noise_Texture.png');
+            opacity: 0.03;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        body {
+            background-color: #0a0a0a;
+            color: #efe8d8;
+        }
+
+        /* Animation de pulsation pour l'étape en cours */
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(201, 162, 74, 0.6); }
+            70% { box-shadow: 0 0 0 15px rgba(201, 162, 74, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(201, 162, 74, 0); }
+        }
+
+        .pulse-active {
+            animation: pulse-gold 2s infinite;
+        }
+
+        /* Effet d'apparition en fondu (fade-in) */
+        .fade-in {
+            animation: fadeIn 1s ease-out forwards;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Barre de progression avec transition douce */
+        #progress-line {
+            transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-4 sm:p-8 selection:bg-studio-gold selection:text-studio-black">
+
+    <div class="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 fade-in">
+        
+        <!-- Colonne Gauche : Informations du Projet -->
+        <div class="lg:col-span-5 flex flex-col justify-center space-y-8">
+            <div>
+                <p class="font-sans text-studio-gold text-xs uppercase tracking-[0.3em] mb-3">Tableau de bord client</p>
+                <h1 class="font-serif text-4xl sm:text-5xl lg:text-6xl text-studio-cream leading-tight mb-4">
+                    Campagne <br><span class="italic text-studio-gold">Corporate '26</span>
+                </h1>
+                <p class="font-sans text-studio-muted text-sm leading-relaxed">
+                    Suivez l'avancement de votre production vidéo en temps réel. Les étapes sont mises à jour par notre équipe technique à chaque jalon validé.
+                </p>
+            </div>
+
+            <!-- Cartes de métadonnées (style technique/caméra) -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-studio-charcoal border border-studio-border p-4 rounded-lg">
+                    <p class="text-[10px] text-studio-muted uppercase tracking-wider mb-1">Format de livraison</p>
+                    <p class="font-sans text-sm text-studio-cream">4K DCI - ProRes 422</p>
+                </div>
+                <div class="bg-studio-charcoal border border-studio-border p-4 rounded-lg">
+                    <p class="text-[10px] text-studio-muted uppercase tracking-wider mb-1">Caméra principale</p>
+                    <p class="font-sans text-sm text-studio-cream">RED Komodo-X</p>
+                </div>
+                <div class="bg-studio-charcoal border border-studio-border p-4 rounded-lg">
+                    <p class="text-[10px] text-studio-muted uppercase tracking-wider mb-1">Date estimée</p>
+                    <p class="font-sans text-sm text-studio-cream">24 Juin 2026</p>
+                </div>
+                <div class="bg-studio-charcoal border border-studio-border p-4 rounded-lg">
+                    <p class="text-[10px] text-studio-muted uppercase tracking-wider mb-1">Référence Projet</p>
+                    <p class="font-sans text-sm text-studio-gold">#PRJ-8820X</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne Droite : La Timeline Verticale -->
+        <div class="lg:col-span-7 bg-studio-charcoal border border-studio-border rounded-2xl p-8 sm:p-12 shadow-2xl relative overflow-hidden">
+            
+            <!-- Décoration en haut à droite -->
+            <div class="absolute top-0 right-0 p-6 opacity-20">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="text-studio-gold">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <circle cx="12" cy="12" r="4"></circle>
+                    <line x1="21.17" y1="8" x2="12" y2="8"></line>
+                    <line x1="3.95" y1="6.06" x2="8.54" y2="14"></line>
+                    <line x1="10.88" y1="21.94" x2="15.46" y2="14"></line>
+                </svg>
+            </div>
+
+            <h2 class="font-serif text-2xl mb-10 text-studio-cream border-b border-studio-border pb-4">État d'avancement</h2>
+
+            <div class="relative pl-6 sm:pl-10 pb-4">
+                <!-- Ligne de fond grise -->
+                <div class="absolute top-4 bottom-4 left-[11px] sm:left-[27px] w-[2px] bg-studio-border"></div>
+                
+                <!-- Ligne de progression dorée (animée en JS) -->
+                <div id="progress-line" class="absolute top-4 left-[11px] sm:left-[27px] w-[2px] bg-studio-gold z-0" style="height: 0%;"></div>
+
+                <!-- Étapes générées dynamiquement par JS -->
+                <div id="timeline-container" class="space-y-8 relative z-10">
+                    <!-- Les étapes seront injectées ici -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION DU PROJET ---
+        // Liste des étapes de ton workflow
+        const workflowSteps = [
+            { id: 0, title: "Tournage prévu", desc: "Planification et repérages validés." },
+            { id: 1, title: "Tournage en cours", desc: "Captation sur le terrain." },
+            { id: 2, title: "Tournage terminé", desc: "Fin des prises de vues, backup sécurisé." },
+            { id: 3, title: "Tri des rushs", desc: "Dérushage et sélection des meilleures prises." },
+            { id: 4, title: "Montage", desc: "Ours, montage global, étalonnage & sound design." },
+            { id: 5, title: "Finalisation", desc: "Ajustements selon vos retours." },
+            { id: 6, title: "Livraison", desc: "Remise des fichiers finaux." }
+        ];
+
+        // L'ÉTAT ACTUEL DE LA COMMANDE (0 à 6)
+        // C'est cette variable que ton backend (via schema.sql) devra venir modifier à terme.
+        const currentStep = 4; // Par exemple : Montage
+
+        // --- LOGIQUE D'AFFICHAGE ---
+        const container = document.getElementById('timeline-container');
+        const progressLine = document.getElementById('progress-line');
+
+        function renderTimeline() {
+            container.innerHTML = ''; // Nettoyer le conteneur
+
+            workflowSteps.forEach((step, index) => {
+                const isCompleted = index < currentStep;
+                const isActive = index === currentStep;
+                const isPending = index > currentStep;
+
+                // Couleurs et styles conditionnels
+                const dotColor = isActive ? 'bg-studio-gold pulse-active border-studio-black' : 
+                                 isCompleted ? 'bg-studio-gold border-studio-black' : 
+                                 'bg-studio-black border-studio-border';
+                
+                const dotInner = isCompleted ? `<svg class="w-3 h-3 text-studio-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>` : 
+                                 isActive ? `<div class="w-2 h-2 rounded-full bg-studio-black"></div>` : '';
+
+                const titleColor = (isActive || isCompleted) ? 'text-studio-cream' : 'text-studio-muted';
+                const opacityStyle = isPending ? 'opacity-50' : 'opacity-100';
+
+                // Création du HTML de l'étape
+                const stepHTML = `
+                    <div class="flex items-start group ${opacityStyle} transition-opacity duration-300">
+                        <!-- Le point (Dot) -->
+                        <div class="absolute left-0 sm:left-4 flex items-center justify-center w-6 h-6 rounded-full border-2 ${dotColor} mt-1.5 transition-colors duration-500 z-10" style="transform: translateX(-50%);">
+                            ${dotInner}
+                        </div>
+                        
+                        <!-- Le texte -->
+                        <div class="ml-4 sm:ml-8">
+                            <h3 class="font-serif text-xl sm:text-2xl ${titleColor} mb-1 transition-colors duration-300">
+                                ${step.title}
+                            </h3>
+                            <p class="font-sans text-xs sm:text-sm text-studio-muted mt-1 max-w-sm">
+                                ${step.desc}
+                            </p>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', stepHTML);
+            });
+
+            // Calculer la hauteur de la ligne dorée
+            // On veut que la ligne descende exactement jusqu'au centre du point actif
+            setTimeout(() => {
+                if (currentStep === 0) {
+                    progressLine.style.height = '0%';
+                } else if (currentStep >= workflowSteps.length - 1) {
+                    progressLine.style.height = '100%';
+                } else {
+                    // Calcul du pourcentage : On divise par le nombre d'espaces entre les points
+                    const percentage = (currentStep / (workflowSteps.length - 1)) * 100;
+                    progressLine.style.height = `calc(${percentage}% - 10px)`; // Ajustement visuel
+                }
+            }, 100); // Léger délai pour laisser l'animation CSS se déclencher à l'ouverture
+        }
+
+        // Lancer l'affichage
+        renderTimeline();
+    </script>
+</body>
+</html>

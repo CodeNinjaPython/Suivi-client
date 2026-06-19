@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="icon" type="image/svg+xml" href="logo-prismae.svg" />
+    <title>Suivi de votre projet</title>
+
+    <!-- Style "Studio" (or / cinéma). Variante du style bleu PRISMAE ; choisie par projet dans l'admin. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Client Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        studio: {
+                            black: '#0a0a0a', charcoal: '#141414', gold: '#c9a24a',
+                            goldglow: 'rgba(201, 162, 74, 0.4)', cream: '#efe8d8',
+                            muted: '#6b6b6b', border: '#2a2a2a'
+                        }
+                    },
+                    fontFamily: { sans: ['DM Mono', 'monospace'], serif: ['Playfair Display', 'serif'] }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body::before {
+            content: ""; position: fixed; inset: 0;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/7/76/1k_Dissolve_Noise_Texture.png');
+            opacity: 0.03; pointer-events: none; z-index: 50;
+        }
+        body { background-color: #0a0a0a; color: #efe8d8; }
+
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(201,162,74,.6); }
+            70% { box-shadow: 0 0 0 15px rgba(201,162,74,0); }
+            100% { box-shadow: 0 0 0 0 rgba(201,162,74,0); }
+        }
+        .pulse-active { animation: pulse-gold 2s infinite; }
+        .fade-in { animation: fadeIn 1s ease-out forwards; opacity: 0; transform: translateY(10px); }
+        @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+        #progress-line { transition: height 1s cubic-bezier(.4,0,.2,1); }
+
+        /* squelette de chargement */
+        .sk { display:block; border-radius:6px;
+            background:linear-gradient(90deg, rgba(239,232,216,.05) 25%, rgba(239,232,216,.11) 37%, rgba(239,232,216,.05) 63%);
+            background-size:400% 100%; animation:shimmer 1.5s ease-in-out infinite; }
+        @keyframes shimmer { 0%{background-position:100% 50%} 100%{background-position:0 50%} }
+        #skeleton { display:none; }
+        body.loading #skeleton { display:grid; }
+        body.loading #app { display:none; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .pulse-active, .fade-in, .sk { animation: none; opacity:1; transform:none; }
+        }
+    </style>
+</head>
+
+<body class="loading min-h-screen flex items-center justify-center p-4 sm:p-8 selection:bg-studio-gold selection:text-studio-black">
+
+    <!-- Squelette de chargement -->
+    <div id="skeleton" class="max-w-5xl w-full grid-cols-1 lg:grid-cols-12 gap-8" aria-hidden="true">
+        <div class="lg:col-span-5 flex flex-col justify-center space-y-6">
+            <div class="sk h-3 w-40"></div>
+            <div class="sk h-12 w-3/4"></div>
+            <div class="sk h-3 w-full"></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="sk h-20 rounded-lg"></div><div class="sk h-20 rounded-lg"></div>
+                <div class="sk h-20 rounded-lg"></div><div class="sk h-20 rounded-lg"></div>
+            </div>
+        </div>
+        <div class="lg:col-span-7 sk h-[420px] rounded-2xl"></div>
+    </div>
+
+    <!-- Application -->
+    <div id="app" class="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 fade-in">
+
+        <!-- Colonne gauche : infos projet -->
+        <div class="lg:col-span-5 flex flex-col justify-center space-y-8">
+            <div>
+                <div class="flex items-center gap-2.5 mb-4">
+                    <svg width="26" height="24" viewBox="0 0 512 480" fill="none" aria-hidden="true">
+                        <defs><linearGradient id="gp" x1="256" y1="60" x2="430" y2="430" gradientUnits="userSpaceOnUse">
+                            <stop offset="0" stop-color="#2a2418"/><stop offset=".6" stop-color="#c9a24a"/><stop offset="1" stop-color="#efe8d8"/>
+                        </linearGradient></defs>
+                        <path fill="#efe8d8" fill-rule="evenodd" d="M256 40 36 440H476L256 40Zm0 150 110 200H146L256 190Z"/>
+                        <path fill="url(#gp)" d="M256 190 366 390 462 430 256 60 256 190Z"/>
+                    </svg>
+                    <span id="studioName" class="font-serif text-lg text-studio-cream"></span>
+                </div>
+                <p class="font-sans text-studio-gold text-xs uppercase tracking-[0.3em] mb-3">Tableau de bord client</p>
+                <h1 id="projectTitle" class="font-serif text-4xl sm:text-5xl lg:text-6xl text-studio-cream leading-tight mb-4">—</h1>
+                <p class="font-sans text-studio-muted text-sm leading-relaxed">
+                    Suivez l'avancement de votre production en temps réel. Les étapes sont mises à jour par notre équipe à chaque jalon validé.
+                </p>
+            </div>
+
+            <!-- Cartes métadonnées (générées) -->
+            <div id="metaCards" class="grid grid-cols-2 gap-4"></div>
+
+            <!-- Le mot de l'équipe -->
+            <div id="noteBlock" class="hidden bg-studio-charcoal border border-studio-border p-5 rounded-lg">
+                <p class="text-[10px] text-studio-gold uppercase tracking-wider mb-2">Le mot de l'équipe</p>
+                <p id="noteText" class="font-serif italic text-studio-cream/90 text-sm leading-relaxed"></p>
+            </div>
+
+            <!-- Livraison -->
+            <a id="deliveryLink" href="#" target="_blank" rel="noopener"
+               class="hidden group items-center justify-between bg-studio-gold text-studio-black px-6 py-4 rounded-xl shadow-[0_0_25px_rgba(201,162,74,.25)] transition hover:brightness-105 active:scale-[.99]">
+                <span>
+                    <span class="block font-sans text-[10px] uppercase tracking-[0.2em] opacity-70">C'est prêt</span>
+                    <span class="block font-serif text-xl">Accéder à votre livraison</span>
+                </span>
+                <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+
+            <!-- Partage -->
+            <button id="shareBtn" class="self-start inline-flex items-center gap-2 border border-studio-border rounded-lg px-4 py-2 font-sans text-xs uppercase tracking-widest text-studio-muted transition hover:border-studio-gold hover:text-studio-cream">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+                <span id="shareLabel">Partager le suivi</span>
+            </button>
+        </div>
+
+        <!-- Colonne droite : timeline verticale -->
+        <div class="lg:col-span-7 bg-studio-charcoal border border-studio-border rounded-2xl p-8 sm:p-12 shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-6 opacity-20">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="text-studio-gold">
+                    <circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle>
+                    <line x1="21.17" y1="8" x2="12" y2="8"></line><line x1="3.95" y1="6.06" x2="8.54" y2="14"></line><line x1="10.88" y1="21.94" x2="15.46" y2="14"></line>
+                </svg>
+            </div>
+
+            <div class="flex items-end justify-between mb-10 border-b border-studio-border pb-4">
+                <h2 class="font-serif text-2xl text-studio-cream">État d'avancement</h2>
+                <span id="stepCount" class="font-sans text-xs text-studio-muted"></span>
+            </div>
+
+            <div class="relative pl-6 sm:pl-10 pb-4">
+                <div class="absolute top-4 bottom-4 left-[11px] sm:left-[27px] w-[2px] bg-studio-border"></div>
+                <div id="progress-line" class="absolute top-4 left-[11px] sm:left-[27px] w-[2px] bg-studio-gold z-0" style="height: 0%;"></div>
+                <div id="timeline-container" class="space-y-8 relative z-10"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    /* =========================================================================
+       Style "Studio" (or) branché sur Supabase — même source de données que le
+       style bleu. La porte d'entrée reste suivi.html ; ce fichier est atteint
+       quand le projet a style = 'studio' (sinon on renvoie vers suivi.html).
+       ========================================================================= */
+    const SUPABASE_URL  = "https://omqskfgodwycorwokwzo.supabase.co";
+    const SUPABASE_ANON = "sb_publishable_G4VHv4hDJEHTRrdRFke_2w_r1Ngp7MQ";
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    const MONTHS = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+    function fmtDate(iso) {
+        if (!iso) return "";
+        const d = new Date(iso + "T00:00:00");
+        return d.getDate() + " " + MONTHS[d.getMonth()] + " " + d.getFullYear();
+    }
+
+    function showMessage(titre, detail) {
+        document.body.classList.remove("loading");
+        document.body.innerHTML = `<div class="text-center px-6">
+            <p class="font-serif text-3xl text-studio-cream">${titre}</p>
+            ${detail ? `<p class="mt-3 font-sans text-sm text-studio-muted max-w-xs mx-auto">${detail}</p>` : ""}
+        </div>`;
+    }
+
+    function render(p) {
+        document.body.classList.remove("loading");
+        const steps = Array.isArray(p.steps) ? p.steps : [];
+        const last = steps.length - 1;
+        const cur = Math.min(p.current_step, last);
+
+        document.getElementById("studioName").textContent = p.studio_name || "Studio";
+        document.getElementById("projectTitle").textContent = p.project_title || "—";
+        document.title = (p.project_title || "Suivi") + " — Suivi";
+        document.getElementById("stepCount").textContent = p.delivered ? "Projet livré" : ("Étape " + (cur + 1) + " / " + steps.length);
+
+        // Cartes métadonnées (uniquement celles renseignées)
+        const cards = [];
+        if (p.client_name)         cards.push(["Client", p.client_name, false]);
+        if (p.project_type)        cards.push(["Type de projet", p.project_type, false]);
+        if (p.event_date)          cards.push(["Date de l'événement", fmtDate(p.event_date), false]);
+        if (!p.delivered && p.estimated_delivery) cards.push(["Livraison estimée", fmtDate(p.estimated_delivery), true]);
+        document.getElementById("metaCards").innerHTML = cards.map(([l, v, gold]) => `
+            <div class="bg-studio-charcoal border border-studio-border p-4 rounded-lg">
+                <p class="text-[10px] text-studio-muted uppercase tracking-wider mb-1">${l}</p>
+                <p class="font-sans text-sm ${gold ? 'text-studio-gold' : 'text-studio-cream'}">${v}</p>
+            </div>`).join("");
+
+        // Note
+        if (p.client_note) {
+            document.getElementById("noteText").textContent = p.client_note;
+            document.getElementById("noteBlock").classList.remove("hidden");
+        }
+        // Livraison
+        if (p.delivery_url) {
+            const a = document.getElementById("deliveryLink");
+            a.href = p.delivery_url;
+            a.classList.remove("hidden");
+            a.classList.add("flex");
+        }
+
+        // Timeline
+        const container = document.getElementById("timeline-container");
+        container.innerHTML = "";
+        steps.forEach((name, index) => {
+            const isCompleted = index < cur || (index === last && p.delivered);
+            const isActive = index === cur && !p.delivered;
+            const isPending = !isCompleted && !isActive;
+
+            const dotColor = isActive ? 'bg-studio-gold pulse-active border-studio-black' :
+                             isCompleted ? 'bg-studio-gold border-studio-black' :
+                             'bg-studio-black border-studio-border';
+            const dotInner = isCompleted ? `<svg class="w-3 h-3 text-studio-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>` :
+                             isActive ? `<div class="w-2 h-2 rounded-full bg-studio-black"></div>` : '';
+            const titleColor = (isActive || isCompleted) ? 'text-studio-cream' : 'text-studio-muted';
+            const opacityStyle = isPending ? 'opacity-50' : 'opacity-100';
+            const date = p.step_dates && p.step_dates[index] ? fmtDate(p.step_dates[index]) : "";
+            const stateLabel = isCompleted ? "Terminé" : isActive ? "En cours" : "À venir";
+
+            container.insertAdjacentHTML('beforeend', `
+                <div class="flex items-start ${opacityStyle} transition-opacity duration-300">
+                    <div class="absolute left-0 sm:left-4 flex items-center justify-center w-6 h-6 rounded-full border-2 ${dotColor} mt-1.5 transition-colors duration-500 z-10" style="transform: translateX(-50%);">${dotInner}</div>
+                    <div class="ml-4 sm:ml-8">
+                        <p class="font-sans text-[10px] uppercase tracking-[0.2em] ${isActive ? 'text-studio-gold' : 'text-studio-muted'} mb-1">${stateLabel}</p>
+                        <h3 class="font-serif text-xl sm:text-2xl ${titleColor} leading-tight">${name}</h3>
+                        ${date ? `<p class="font-sans text-xs text-studio-muted mt-1">${date}</p>` : ""}
+                    </div>
+                </div>`);
+        });
+
+        // Ligne de progression dorée
+        const progressLine = document.getElementById("progress-line");
+        setTimeout(() => {
+            if (p.delivered || cur >= last) progressLine.style.height = '100%';
+            else if (cur <= 0) progressLine.style.height = '0%';
+            else progressLine.style.height = `calc(${(cur / last) * 100}% - 10px)`;
+        }, 100);
+    }
+
+    async function loadProject() {
+        const params = new URLSearchParams(location.search);
+        const token = params.get("p");
+        if (!token) { showMessage("Lien invalide", "Ce lien ne contient aucun projet."); return; }
+
+        const { data, error } = await sb.rpc("get_project_by_token", { token });
+        if (error) { showMessage("Une erreur est survenue", "Réessayez dans un instant."); console.error(error); return; }
+        if (!data) { showMessage("Projet introuvable", "Ce projet n'existe pas ou n'est plus disponible."); return; }
+
+        // Redirection par style : si ce projet n'est pas en style "studio", on rend la main au style bleu
+        if (data.style !== "studio") { location.replace("suivi.html" + location.search); return; }
+
+        render(data);
+    }
+
+    // Partage
+    document.getElementById("shareBtn").addEventListener("click", async () => {
+        const url = location.href;
+        if (navigator.share) { try { await navigator.share({ title: document.title, url }); } catch (_) {} return; }
+        const label = document.getElementById("shareLabel");
+        try { await navigator.clipboard.writeText(url); label.textContent = "Lien copié"; setTimeout(() => label.textContent = "Partager le suivi", 1800); } catch (_) {}
+    });
+
+    loadProject();
+    </script>
+</body>
+</html>

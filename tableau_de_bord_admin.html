@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Production | Studio</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        noir:        '#0B0A08',
+                        charbon:     '#14110C',
+                        'charbon-2': '#1C1810',
+                        or:          '#C9A24A',
+                        'or-clair':  '#E6CD93',
+                        creme:       '#EFE8D8',
+                        sable:       '#8C8473',
+                    },
+                    fontFamily: {
+                        display: ['"Cormorant Garamond"', 'serif'],
+                        sans:    ['"DM Sans"', 'sans-serif'],
+                        mono:    ['"DM Mono"', 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <!-- Librairie pour générer le QR Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        body { background-color: #0B0A08; color: #EFE8D8; }
+        
+        .input-dark { 
+            background: #1C1810; 
+            border: 1px solid #2A2418; 
+            color: #EFE8D8; 
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .input-dark:focus { 
+            border-color: #C9A24A; 
+            outline: none; 
+            box-shadow: 0 0 0 1px rgba(201,162,74,0.3);
+        }
+        
+        /* Personnalisation de la Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0B0A08; }
+        ::-webkit-scrollbar-thumb { background: #1C1810; border-radius: 4px; border: 1px solid #2A2418;}
+        ::-webkit-scrollbar-thumb:hover { background: #C9A24A; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col md:flex-row font-sans selection:bg-or selection:text-noir">
+
+    <!-- Sidebar / Menu de navigation -->
+    <aside class="w-full md:w-64 bg-charbon border-r border-charbon-2 p-6 flex flex-col">
+        <div class="mb-12">
+            <h1 class="font-display text-3xl text-creme leading-none">Studio</h1>
+            <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-or mt-1">Console d'Admin</p>
+        </div>
+        
+        <nav class="flex-1 space-y-2 font-mono text-xs">
+            <a href="#" class="block py-2.5 px-3 bg-charbon-2/50 text-or border-l-2 border-or rounded-r">Projet Actuel</a>
+            <a href="#" class="block py-2.5 px-3 text-sable hover:text-creme transition">Tous les projets</a>
+            <a href="#" class="block py-2.5 px-3 text-sable hover:text-creme transition">Archives</a>
+            <a href="#" class="block py-2.5 px-3 text-sable hover:text-creme transition">Base de données</a>
+        </nav>
+
+        <div class="mt-auto pt-6 border-t border-charbon-2">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-or flex items-center justify-center text-noir font-bold font-display text-lg">J</div>
+                <div class="font-sans text-sm">
+                    <p class="text-creme font-medium">Jérémie</p>
+                    <p class="text-sable text-xs">Administrateur</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Contenu Principal -->
+    <main class="flex-1 p-6 md:p-12 overflow-y-auto">
+        <header class="flex justify-between items-end mb-10 border-b border-charbon-2 pb-6">
+            <div>
+                <p class="font-mono text-or text-[10px] uppercase tracking-[0.2em] mb-2">Édition du projet</p>
+                <h2 class="font-display text-3xl md:text-5xl font-bold">Votre film de mariage</h2>
+                <p class="font-sans text-sable text-sm mt-2">Client : Sophie & Marc</p>
+            </div>
+            <button class="bg-or hover:bg-or-clair text-noir px-5 py-2.5 text-xs font-mono font-medium uppercase tracking-widest rounded-lg transition-colors shadow-[0_0_15px_rgba(201,162,74,0.2)]">
+                Sauvegarder
+            </button>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Colonne 1 : Mise à jour du Statut -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <!-- Section : Étape d'avancement -->
+                <section class="bg-charbon border border-charbon-2 rounded-2xl p-7 shadow-lg">
+                    <h3 class="font-display text-2xl mb-5 flex items-center">
+                        <span class="w-2 h-2 bg-or rounded-full mr-3 shadow-[0_0_8px_rgba(201,162,74,0.6)]"></span>
+                        Étape d'avancement
+                    </h3>
+                    
+                    <div class="font-sans">
+                        <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-3">Sélectionner la phase actuelle</label>
+                        <select id="step-select" class="w-full input-dark p-3.5 rounded-xl appearance-none cursor-pointer">
+                            <option value="0">1. Tournage prévu</option>
+                            <option value="1">2. Tournage en cours</option>
+                            <option value="2">3. Tournage terminé</option>
+                            <option value="3">4. Tri des rushs</option>
+                            <option value="4" selected>5. Montage</option>
+                            <option value="5">6. Finalisation</option>
+                            <option value="6">7. Livraison</option>
+                        </select>
+                    </div>
+                </section>
+
+                <!-- Section : Communication Client -->
+                <section class="bg-charbon border border-charbon-2 rounded-2xl p-7 shadow-lg">
+                    <h3 class="font-display text-2xl mb-5 flex items-center">
+                        <span class="w-2 h-2 bg-or rounded-full mr-3 shadow-[0_0_8px_rgba(201,162,74,0.6)]"></span>
+                        Communication & Livraison
+                    </h3>
+                    
+                    <div class="space-y-6 font-sans">
+                        <div>
+                            <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-3">Le mot de l'équipe (visible par le client)</label>
+                            <textarea id="client-note" rows="3" class="w-full input-dark p-3.5 rounded-xl text-sm" placeholder="Ex: Le premier montage est terminé. L'étalonnage donne une ambiance incroyable..."></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-3">Lien de Livraison (WeTransfer, Google Drive...)</label>
+                            <input type="url" id="delivery-url" class="w-full input-dark p-3.5 rounded-xl text-sm font-mono placeholder:font-sans" placeholder="https://...">
+                        </div>
+
+                        <label class="flex items-center cursor-pointer group p-3 rounded-xl border border-transparent hover:border-charbon-2 hover:bg-charbon-2/30 transition">
+                            <input type="checkbox" id="is-delivered" class="sr-only peer">
+                            <div class="w-5 h-5 rounded border-2 border-sable peer-checked:bg-or peer-checked:border-or flex items-center justify-center transition mr-4">
+                                <svg class="w-3 h-3 text-noir opacity-0 peer-checked:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                            </div>
+                            <div>
+                                <span class="block text-sm text-creme font-medium group-hover:text-or transition">Projet définitivement livré</span>
+                                <span class="block text-xs text-sable mt-0.5">Affiche l'écran de fin et débloque le bouton de téléchargement.</span>
+                            </div>
+                        </label>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Colonne 2 : Partage et QR Code -->
+            <div class="space-y-8">
+                <section class="bg-charbon border border-charbon-2 rounded-2xl p-7 text-center shadow-lg">
+                    <h3 class="font-display text-2xl mb-2">Accès Client</h3>
+                    <p class="font-sans text-xs text-sable mb-7">Partagez ce QR Code ou le lien unique.</p>
+                    
+                    <!-- Conteneur QR Code -->
+                    <div class="bg-creme p-4 rounded-xl inline-block mb-7 shadow-[0_0_20px_rgba(201,162,74,0.15)]">
+                        <div id="qrcode"></div>
+                    </div>
+
+                    <div class="font-mono text-left bg-noir border border-charbon-2 p-3.5 rounded-xl flex items-center justify-between group cursor-pointer hover:border-sable transition" onclick="copyLink()">
+                        <span id="client-link" class="text-[11px] text-or truncate mr-3">suivi.html?p=abc123xyz</span>
+                        <button class="text-sable group-hover:text-or transition" title="Copier le lien">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                        </button>
+                    </div>
+                </section>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Notification Toast pour la copie -->
+    <div id="toast" class="fixed bottom-6 right-6 transform translate-y-20 opacity-0 transition-all duration-300 bg-or text-noir px-5 py-3 rounded-lg shadow-[0_5px_15px_rgba(201,162,74,0.3)] font-mono text-[11px] uppercase tracking-widest font-bold z-50 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        Lien copié !
+    </div>
+
+    <script>
+        // Génération du QR Code
+        const linkToShare = "https://ton-site.com/suivi.html?p=abc123xyz"; 
+        
+        new QRCode(document.getElementById("qrcode"), {
+            text: linkToShare,
+            width: 150,
+            height: 150,
+            colorDark : "#14110C",
+            colorLight : "#EFE8D8",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+
+        // Fonction pour copier le lien et afficher la notification (Toast)
+        function copyLink() {
+            navigator.clipboard.writeText(linkToShare).then(() => {
+                const toast = document.getElementById('toast');
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                
+                // Cache la notification après 3 secondes
+                setTimeout(() => {
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 3000);
+            });
+        }
+    </script>
+</body>
+</html>

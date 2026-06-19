@@ -21,6 +21,7 @@ create table projects (
   delivered     boolean not null default false,
   delivery_url  text,
   estimated_delivery date,                -- date de livraison estimée (optionnelle)
+  style         text not null default 'prismae',  -- 'prismae' (bleu) ou 'studio' (or)
   created_at    timestamptz default now(),
   updated_at    timestamptz default now()
 );
@@ -44,7 +45,7 @@ returns json language sql security definer set search_path = public as $$
     'project_type', project_type, 'event_date', event_date,
     'steps', steps, 'current_step', current_step, 'step_dates', step_dates,
     'client_note', client_note, 'delivered', delivered, 'delivery_url', delivery_url,
-    'estimated_delivery', estimated_delivery
+    'estimated_delivery', estimated_delivery, 'style', style
   )
   from projects where public_token = token;
 $$;

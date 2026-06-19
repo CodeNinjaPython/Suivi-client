@@ -174,6 +174,13 @@
         <input name="studio_tagline" class="field" value="Immortels Souvenirs" />
       </div>
       <div class="sm:col-span-2">
+        <label class="lbl">Style de la page client</label>
+        <select name="style" class="field">
+          <option value="prismae">Bleu — PRISMAE</option>
+          <option value="studio">Or — Studio (cinéma)</option>
+        </select>
+      </div>
+      <div class="sm:col-span-2">
         <label class="lbl">Étapes du workflow (une par ligne)</label>
         <textarea name="steps" class="field" rows="7">Tournage prévu
 Tournage en cours
@@ -217,6 +224,15 @@ Livraison</textarea>
         <button id="d_prevBtn" class="btn-ghost flex-1 text-sm">← Étape précédente</button>
         <button id="d_nextBtn" class="btn-or flex-1 text-sm">Étape suivante →</button>
       </div>
+    </div>
+
+    <!-- Style de la page client -->
+    <div class="mt-4">
+      <label class="lbl">Style de la page client</label>
+      <select id="d_style" class="field">
+        <option value="prismae">Bleu — PRISMAE</option>
+        <option value="studio">Or — Studio (cinéma)</option>
+      </select>
     </div>
 
     <!-- Note client -->
@@ -380,7 +396,7 @@ async function loadProjects() {
         <div>
           <p class="font-display text-xl font-bold text-ink">${p.project_title}</p>
           <p class="mt-0.5 font-mono text-xs text-ink-muted">
-            ${p.client_name}${p.project_type ? " · " + p.project_type : ""}${p.event_date ? " · " + fmtDate(p.event_date) : ""}
+            ${p.client_name}${p.project_type ? " · " + p.project_type : ""}${p.event_date ? " · " + fmtDate(p.event_date) : ""} · ${p.style === "studio" ? "Or" : "Bleu"}
           </p>
         </div>
         <span class="shrink-0 rounded-full border ${p.delivered ? 'border-accent text-accent' : 'border-[rgba(244,241,236,0.12)] text-accent-soft'} px-3 py-1 font-mono text-[10px] uppercase tracking-widest">
@@ -421,6 +437,7 @@ $("createForm").addEventListener("submit", async (e) => {
     event_date:     f.event_date.value || null,
     studio_name:    f.studio_name.value.trim() || "Jérémie & Jeannette",
     studio_tagline: f.studio_tagline.value.trim() || null,
+    style:          f.style.value || "prismae",
     steps,
     current_step:   0,
     step_dates:     {},
@@ -459,6 +476,7 @@ function renderDetail() {
   $("d_prevBtn").classList.toggle("opacity-40", cur <= 0);
   $("d_nextBtn").classList.toggle("opacity-40", cur >= last);
 
+  $("d_style").value = p.style || "prismae";
   $("d_note").value = p.client_note || "";
   $("d_estimated").value = p.estimated_delivery || "";
   $("d_delivered").checked = !!p.delivered;
@@ -498,6 +516,7 @@ $("d_saveBtn").addEventListener("click", async () => {
   const patch = {
     current_step: current.current_step,
     step_dates:   current.step_dates || {},
+    style:        $("d_style").value || "prismae",
     client_note:  $("d_note").value.trim() || null,
     estimated_delivery: $("d_estimated").value || null,
     delivered:    $("d_delivered").checked,

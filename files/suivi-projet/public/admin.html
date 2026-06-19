@@ -95,7 +95,8 @@
 <body class="min-h-screen font-sans text-ink antialiased">
 
 <!-- ====================== ÉCRAN DE CONNEXION ====================== -->
-<section id="loginScreen" class="hidden min-h-screen items-center justify-center px-6">
+<!-- Visible par défaut : si le JS échoue, on a quand même l'écran de connexion (jamais de page blanche). -->
+<section id="loginScreen" class="flex min-h-screen items-center justify-center px-6">
   <div class="w-full max-w-sm">
     <span class="kicker mb-6">Accès privé</span>
     <p class="font-display text-4xl font-bold text-ink">Administration</p>

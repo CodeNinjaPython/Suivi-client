@@ -10,6 +10,7 @@ create table projects (
   studio_name   text not null default 'Jérémie & Jeannette',
   studio_tagline text default 'Immortels Souvenirs',
   client_name   text not null,
+  client_email  text,                     -- email du client (pour les notifications)
   project_title text not null,
   project_type  text,
   event_date    date,

@@ -7,6 +7,26 @@
     <link rel="icon" type="image/svg+xml" href="logo-prismae.svg" />
     <title>Suivi de votre projet</title>
 
+    <!-- Aperçu de lien (Open Graph / Twitter). og:image en relatif ; à passer en URL absolue une fois le domaine fixé. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PRISMAE" />
+    <meta property="og:title" content="PRISMAE — Suivi de votre projet" />
+    <meta property="og:description" content="Suivez l'avancement de votre production vidéo &amp; photo en temps réel." />
+    <meta property="og:image" content="og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="PRISMAE — Suivi de votre projet" />
+    <meta name="twitter:image" content="og-image.png" />
+
+    <!-- PWA / ajout à l'écran d'accueil -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="PRISMAE" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
     <!-- Style "Studio" (or / cinéma). Variante du style bleu PRISMAE ; choisie par projet dans l'admin. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,10 +53,11 @@
     </script>
 
     <style>
+        /* Grain intégré (SVG inline) — aucune dépendance externe */
         body::before {
             content: ""; position: fixed; inset: 0;
-            background-image: url('https://upload.wikimedia.org/wikipedia/commons/7/76/1k_Dissolve_Noise_Texture.png');
-            opacity: 0.03; pointer-events: none; z-index: 50;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            opacity: 0.04; pointer-events: none; z-index: 50;
         }
         body { background-color: #0a0a0a; color: #efe8d8; }
 

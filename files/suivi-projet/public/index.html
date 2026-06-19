@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#07090c" />
+<link rel="icon" type="image/svg+xml" href="logo-prismae.svg" />
+<title>PRISMAE — Suivi de projet</title>
+<meta name="robots" content="noindex" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { bg:'#07090c','bg-soft':'#0e1218', ink:'#f4f1ec','ink-soft':'#a3a8b2','ink-muted':'#6b7280', accent:'#3b9bff','accent-soft':'#9ecbff' },
+    fontFamily: { display:['Syne','sans-serif'], sans:['Manrope','system-ui','sans-serif'] }
+  } } };
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap');
+  :root { color-scheme: dark; }
+  html { background:#07090c; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(59,155,255,0.16), transparent 60%),
+      radial-gradient(800px 500px at 0% 30%, rgba(99,102,241,0.06), transparent 70%),
+      #07090c;
+    -webkit-font-smoothing: antialiased;
+  }
+  .font-display { letter-spacing:-0.02em; }
+  @keyframes dot-pulse { 0%,100%{ box-shadow:0 0 8px #3b9bff, 0 0 0 0 rgba(59,155,255,.4);} 60%{ box-shadow:0 0 16px #3b9bff, 0 0 0 7px rgba(59,155,255,0);} }
+  .pulse-dot { animation: dot-pulse 2.6s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .pulse-dot { animation:none; } }
+</style>
+</head>
+<body class="min-h-screen font-sans text-ink antialiased">
+  <main class="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 text-center">
+    <svg width="72" height="68" viewBox="0 0 512 480" fill="none" class="drop-shadow-[0_10px_30px_rgba(59,155,255,0.3)]" aria-hidden="true">
+      <defs><linearGradient id="p" x1="256" y1="60" x2="430" y2="430" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#1b2530"/><stop offset=".5" stop-color="#3b9bff"/><stop offset=".8" stop-color="#9ecbff"/><stop offset="1" stop-color="#ffffff"/>
+      </linearGradient></defs>
+      <path fill="#f4f1ec" fill-rule="evenodd" d="M256 40 36 440H476L256 40Zm0 150 110 200H146L256 190Z"/>
+      <path fill="url(#p)" d="M256 190 366 390 462 430 256 60 256 190Z"/>
+    </svg>
+
+    <h1 class="font-display mt-7 text-4xl font-extrabold text-ink">PRISMAE</h1>
+    <p class="mt-2 text-[11px] uppercase tracking-[0.28em] text-accent-soft">Production vidéo &amp; photo · La Réunion</p>
+
+    <p class="mt-8 max-w-xs text-ink-soft">
+      Le suivi de votre projet s'ouvre depuis le lien personnel que vous avez reçu.
+    </p>
+
+    <p class="mt-7 inline-flex items-center gap-2 rounded-full border border-[rgba(244,241,236,0.1)] px-4 py-2 text-xs text-ink-muted">
+      <span class="h-1.5 w-1.5 rounded-full bg-accent pulse-dot"></span> Plateforme de suivi en ligne
+    </p>
+
+    <a href="admin.html" class="mt-12 text-xs uppercase tracking-[0.2em] text-ink-muted transition hover:text-accent-soft">Espace admin</a>
+  </main>
+</body>
+</html>

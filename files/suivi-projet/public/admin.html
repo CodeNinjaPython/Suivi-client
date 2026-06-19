@@ -132,9 +132,23 @@
   </header>
 
   <main class="mx-auto max-w-4xl px-6 py-8">
-    <div class="mb-4 flex items-end justify-between">
-      <h2 class="font-display text-xl font-bold text-accent-soft">Projets</h2>
-      <span id="projectCount" class="font-mono text-xs text-ink-muted"></span>
+    <div class="mb-5">
+      <div class="flex items-end justify-between">
+        <h2 class="font-display text-xl font-bold text-accent-soft">Projets</h2>
+        <span id="projectCount" class="font-mono text-xs text-ink-muted"></span>
+      </div>
+      <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <input id="searchInput" type="search" class="field sm:flex-1" placeholder="Rechercher un client, un projet…" />
+        <select id="sortSelect" class="field sm:w-44" aria-label="Trier les projets">
+          <option value="recent">Plus récents</option>
+          <option value="old">Plus anciens</option>
+          <option value="client">Client A→Z</option>
+          <option value="title">Titre A→Z</option>
+        </select>
+        <label class="flex items-center gap-2 whitespace-nowrap text-sm text-ink-soft">
+          <input id="showArchived" type="checkbox" class="h-4 w-4 accent-[#3b9bff]" /> Archives
+        </label>
+      </div>
     </div>
     <div id="projectList" class="space-y-3"></div>
     <p id="emptyState" class="hidden py-16 text-center font-mono text-sm text-ink-muted">
@@ -227,10 +241,27 @@ Livraison</textarea>
       </div>
     </div>
 
+    <!-- Édition complète des informations du projet -->
+    <details class="mt-4 rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
+      <summary class="cursor-pointer select-none text-sm font-semibold text-ink">Informations du projet</summary>
+      <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="sm:col-span-2"><label class="lbl">Titre du projet</label><input id="d_title_in" class="field" /></div>
+        <div class="sm:col-span-2"><label class="lbl">Nom du client</label><input id="d_client" class="field" /></div>
+        <div><label class="lbl">Type de projet</label><input id="d_type" class="field" /></div>
+        <div><label class="lbl">Date de l'événement</label><input id="d_event" type="date" class="field" /></div>
+        <div><label class="lbl">Nom du studio</label><input id="d_studio" class="field" /></div>
+        <div><label class="lbl">Accroche studio</label><input id="d_tagline" class="field" /></div>
+        <div class="sm:col-span-2">
+          <label class="lbl">Étapes du workflow (une par ligne)</label>
+          <textarea id="d_steps" class="field" rows="7"></textarea>
+        </div>
+      </div>
+    </details>
+
     <!-- Style de la page client -->
     <div class="mt-4">
       <label class="lbl">Style de la page client</label>
-      <select id="d_style" class="field">
+      <select id="d_style" class="field" aria-label="Style de la page client">
         <option value="prismae">Bleu — PRISMAE</option>
         <option value="studio">Or — Studio (cinéma)</option>
       </select>
@@ -258,6 +289,11 @@ Livraison</textarea>
         <label class="lbl">Lien de livraison (Drive, WeTransfer…)</label>
         <input id="d_deliveryUrl" type="url" class="field" placeholder="https://…" />
       </div>
+    </div>
+
+    <div class="mt-5 flex flex-wrap gap-2">
+      <button id="d_archiveBtn" class="btn-ghost text-sm">Archiver</button>
+      <button id="d_duplicateBtn" class="btn-ghost text-sm">Dupliquer</button>
     </div>
 
     <p id="d_saveStatus" class="mt-4 hidden text-sm text-accent"></p>
@@ -367,37 +403,59 @@ $("logoutBtn").addEventListener("click", async () => {
 /* =========================================================================
    LISTE DES PROJETS
    ========================================================================= */
+let allProjects = [];   // tous les projets chargés (filtrés/triés à l'affichage)
+
 async function loadProjects() {
   const { data, error } = await sb
     .from("projects")
     .select("*")
     .order("created_at", { ascending: false });
 
-  const list = $("projectList");
-  list.innerHTML = "";
-
   if (error) {
-    list.innerHTML = `<p class="text-sm text-red-400">Erreur de chargement : ${error.message}</p>`;
+    $("projectList").innerHTML = `<p class="text-sm text-red-400">Erreur de chargement : ${error.message}</p>`;
     return;
   }
+  allProjects = data || [];
+  renderList();
+}
 
-  $("projectCount").textContent = (data.length || 0) + " projet" + (data.length > 1 ? "s" : "");
-  $("emptyState").classList.toggle("hidden", data.length > 0);
+// Applique recherche + tri + filtre archives, puis affiche les cartes
+function renderList() {
+  const term = ($("searchInput").value || "").trim().toLowerCase();
+  const sort = $("sortSelect").value;
+  const showArchived = $("showArchived").checked;
 
-  data.forEach((p) => {
+  let items = allProjects.filter((p) => showArchived ? p.archived : !p.archived);
+  if (term) {
+    items = items.filter((p) =>
+      [(p.client_name||""), (p.project_title||""), (p.project_type||"")]
+        .some((v) => v.toLowerCase().includes(term)));
+  }
+  const byDate = (a, b) => new Date(b.created_at) - new Date(a.created_at);
+  if (sort === "recent") items.sort(byDate);
+  else if (sort === "old") items.sort((a, b) => -byDate(a, b));
+  else if (sort === "client") items.sort((a, b) => (a.client_name||"").localeCompare(b.client_name||"", "fr"));
+  else if (sort === "title") items.sort((a, b) => (a.project_title||"").localeCompare(b.project_title||"", "fr"));
+
+  $("projectCount").textContent = items.length + " projet" + (items.length > 1 ? "s" : "") + (showArchived ? " · archives" : "");
+  $("emptyState").classList.toggle("hidden", items.length > 0);
+
+  const list = $("projectList");
+  list.innerHTML = "";
+  items.forEach((p) => {
     const steps = Array.isArray(p.steps) ? p.steps : [];
     const cur = Math.min(p.current_step, steps.length - 1);
     const label = p.delivered ? "Livré" : (steps[cur] || "—");
     const pct = steps.length ? Math.round((cur + (p.delivered ? 1 : 0)) / steps.length * 100) : 0;
 
     const card = document.createElement("button");
-    card.className = "block w-full rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface/70 p-5 text-left transition hover:border-accent";
+    card.className = "block w-full rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface/70 p-5 text-left transition hover:border-accent" + (p.archived ? " opacity-60" : "");
     card.innerHTML = `
       <div class="flex items-start justify-between gap-4">
         <div>
           <p class="font-display text-xl font-bold text-ink">${p.project_title}</p>
           <p class="mt-0.5 font-mono text-xs text-ink-muted">
-            ${p.client_name}${p.project_type ? " · " + p.project_type : ""}${p.event_date ? " · " + fmtDate(p.event_date) : ""} · ${p.style === "studio" ? "Or" : "Bleu"}
+            ${p.client_name}${p.project_type ? " · " + p.project_type : ""}${p.event_date ? " · " + fmtDate(p.event_date) : ""} · ${p.style === "studio" ? "Or" : "Bleu"}${p.archived ? " · Archivé" : ""}
           </p>
         </div>
         <span class="shrink-0 rounded-full border ${p.delivered ? 'border-accent text-accent' : 'border-[rgba(244,241,236,0.12)] text-accent-soft'} px-3 py-1 font-mono text-[10px] uppercase tracking-widest">
@@ -411,6 +469,11 @@ async function loadProjects() {
     list.appendChild(card);
   });
 }
+
+// Filtres réactifs
+$("searchInput").addEventListener("input", renderList);
+$("sortSelect").addEventListener("change", renderList);
+$("showArchived").addEventListener("change", renderList);
 
 /* =========================================================================
    CRÉATION
@@ -477,11 +540,21 @@ function renderDetail() {
   $("d_prevBtn").classList.toggle("opacity-40", cur <= 0);
   $("d_nextBtn").classList.toggle("opacity-40", cur >= last);
 
+  // Champs d'édition complète
+  $("d_title_in").value = p.project_title || "";
+  $("d_client").value   = p.client_name || "";
+  $("d_type").value     = p.project_type || "";
+  $("d_event").value    = p.event_date || "";
+  $("d_studio").value   = p.studio_name || "";
+  $("d_tagline").value  = p.studio_tagline || "";
+  $("d_steps").value    = steps.join("\n");
+
   $("d_style").value = p.style || "prismae";
   $("d_note").value = p.client_note || "";
   $("d_estimated").value = p.estimated_delivery || "";
   $("d_delivered").checked = !!p.delivered;
   $("d_deliveryUrl").value = p.delivery_url || "";
+  $("d_archiveBtn").textContent = p.archived ? "Désarchiver" : "Archiver";
 
   const link = clientLink(p.public_token);
   $("d_link").value = link;
@@ -514,15 +587,27 @@ $("d_prevBtn").addEventListener("click", () => moveStep(-1));
 
 // Enregistrer toutes les modifications du projet courant
 $("d_saveBtn").addEventListener("click", async () => {
+  // Étapes éditées : on parse, et on garde au moins l'existant si vide
+  const parsedSteps = $("d_steps").value.split("\n").map(s => s.trim()).filter(Boolean);
+  const steps = parsedSteps.length ? parsedSteps : (Array.isArray(current.steps) ? current.steps : []);
+  const clampedStep = Math.min(Math.max(current.current_step, 0), Math.max(steps.length - 1, 0));
+
   const patch = {
-    current_step: current.current_step,
-    step_dates:   current.step_dates || {},
-    style:        $("d_style").value || "prismae",
-    client_note:  $("d_note").value.trim() || null,
+    project_title: $("d_title_in").value.trim() || current.project_title,
+    client_name:   $("d_client").value.trim() || current.client_name,
+    project_type:  $("d_type").value.trim() || null,
+    event_date:    $("d_event").value || null,
+    studio_name:   $("d_studio").value.trim() || "Jérémie & Jeannette",
+    studio_tagline:$("d_tagline").value.trim() || null,
+    steps,
+    current_step:  clampedStep,
+    step_dates:    current.step_dates || {},
+    style:         $("d_style").value || "prismae",
+    client_note:   $("d_note").value.trim() || null,
     estimated_delivery: $("d_estimated").value || null,
-    delivered:    $("d_delivered").checked,
-    delivery_url: $("d_deliveryUrl").value.trim() || null,
-    updated_at:   new Date().toISOString(),
+    delivered:     $("d_delivered").checked,
+    delivery_url:  $("d_deliveryUrl").value.trim() || null,
+    updated_at:    new Date().toISOString(),
   };
   const { error } = await sb.from("projects").update(patch).eq("id", current.id);
   const status = $("d_saveStatus");
@@ -535,7 +620,42 @@ $("d_saveBtn").addEventListener("click", async () => {
   status.textContent = "Enregistré ✓";
   status.classList.add("text-accent");
   Object.assign(current, patch);
+  renderDetail();   // rafraîchit le titre, le méta et la timeline affichés
   loadProjects();
+});
+
+// Archiver / désarchiver
+$("d_archiveBtn").addEventListener("click", async () => {
+  const newVal = !current.archived;
+  const { error } = await sb.from("projects")
+    .update({ archived: newVal, updated_at: new Date().toISOString() }).eq("id", current.id);
+  if (error) {
+    alert("Action impossible : " + error.message + "\n\n(As-tu lancé la migration qui ajoute la colonne 'archived' ?)");
+    return;
+  }
+  current.archived = newVal;
+  $("d_archiveBtn").textContent = newVal ? "Désarchiver" : "Archiver";
+  loadProjects();
+});
+
+// Dupliquer comme modèle (nouveau token, remis à l'étape 0, sans note/livraison)
+$("d_duplicateBtn").addEventListener("click", async () => {
+  const copy = {
+    client_name:    current.client_name,
+    project_title:  current.project_title + " (copie)",
+    project_type:   current.project_type,
+    event_date:     current.event_date,
+    studio_name:    current.studio_name,
+    studio_tagline: current.studio_tagline,
+    style:          current.style || "prismae",
+    steps:          Array.isArray(current.steps) ? current.steps : [],
+    current_step:   0,
+    step_dates:     {},
+  };
+  const { data, error } = await sb.from("projects").insert(copy).select().single();
+  if (error) { alert("Duplication impossible : " + error.message); return; }
+  await loadProjects();
+  openDetail(data);
 });
 
 // Supprimer

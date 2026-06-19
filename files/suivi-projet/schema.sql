@@ -22,6 +22,7 @@ create table projects (
   delivery_url  text,
   estimated_delivery date,                -- date de livraison estimée (optionnelle)
   style         text not null default 'prismae',  -- 'prismae' (bleu) ou 'studio' (or)
+  archived      boolean not null default false,    -- projet archivé (masqué de la liste active)
   created_at    timestamptz default now(),
   updated_at    timestamptz default now()
 );

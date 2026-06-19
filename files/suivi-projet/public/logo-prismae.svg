@@ -1,0 +1,15 @@
+<svg width="512" height="480" viewBox="0 0 512 480" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PRISMAE">
+  <defs>
+    <linearGradient id="prism" x1="256" y1="60" x2="430" y2="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1b2530"/>
+      <stop offset="0.5" stop-color="#3b9bff"/>
+      <stop offset="0.8" stop-color="#9ecbff"/>
+      <stop offset="1" stop-color="#ffffff"/>
+    </linearGradient>
+  </defs>
+  <!-- Anneau du triangle (clair, pour fond sombre) -->
+  <path fill="#f4f1ec" fill-rule="evenodd"
+        d="M256 40 36 440H476L256 40Zm0 150 110 200H146L256 190Z"/>
+  <!-- Arête de lumière réfractée (prisme) -->
+  <path fill="url(#prism)" d="M256 190 366 390 462 430 256 60 256 190Z"/>
+</svg>

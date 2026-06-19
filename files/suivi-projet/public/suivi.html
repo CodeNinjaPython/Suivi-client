@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#07090c" />
+<link rel="icon" type="image/svg+xml" href="logo-prismae.svg" />
+<title>Suivi de votre projet</title>
+
+<!-- Tailwind (Play CDN pour la preview ; en prod, utilise le build Tailwind) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Client Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg:          '#07090c',
+          'bg-soft':   '#0e1218',
+          surface:     '#12161d',
+          ink:         '#f4f1ec',
+          'ink-soft':  '#a3a8b2',
+          'ink-muted': '#6b7280',
+          accent:      '#3b9bff',
+          'accent-soft':'#9ecbff',
+        },
+        fontFamily: {
+          display: ['Syne', 'sans-serif'],
+          sans:    ['Manrope', 'system-ui', 'sans-serif'],
+          mono:    ['"DM Mono"', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap');
+
+  :root { color-scheme: dark; }
+  html { scroll-behavior: smooth; background: #07090c; }
+  body {
+    background:
+      radial-gradient(1400px 700px at 90% -10%, rgba(59,155,255,0.16), transparent 60%),
+      radial-gradient(900px 500px at 0% 30%, rgba(99,102,241,0.06), transparent 70%),
+      #07090c;
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: #3b9bff; color: #07090c; }
+
+  .font-display { letter-spacing: -0.02em; line-height: 1.02; }
+
+  /* Texture grain discrète */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    opacity: .05; z-index: 0;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  main { position: relative; z-index: 1; }
+
+  /* Badge "kicker" à point pulsé */
+  .kicker {
+    display:inline-flex; align-items:center; gap:.5rem; white-space:nowrap;
+    padding:.4rem .75rem; border-radius:999px;
+    background:rgba(59,155,255,.12); color:#9ecbff;
+    font-size:.7rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+  }
+  .kicker::before {
+    content:""; width:6px; height:6px; border-radius:50%;
+    background:#3b9bff; box-shadow:0 0 8px #3b9bff;
+    animation: dot-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes dot-pulse {
+    0%,100% { box-shadow:0 0 8px #3b9bff, 0 0 0 0 rgba(59,155,255,.4); }
+    60%     { box-shadow:0 0 16px #3b9bff, 0 0 0 7px rgba(59,155,255,0); }
+  }
+
+  /* ---- Timeline : la signature ---- */
+  .track { position: relative; }
+  .step { position: relative; padding-left: 3.25rem; padding-bottom: 2.25rem; }
+  .step:last-child { padding-bottom: 0; }
+
+  .step::before {
+    content: "";
+    position: absolute;
+    left: 0.9375rem; top: 1.6rem; bottom: -0.65rem;
+    width: 2px; background: rgba(244,241,236,.10);
+  }
+  .step:last-child::before { display: none; }
+  .step[data-status="done"]::before   { background: #3b9bff; }
+  .step[data-status="active"]::before { background: linear-gradient(#3b9bff, rgba(244,241,236,.10)); }
+
+  .marker {
+    position: absolute; left: 0; top: 0.15rem;
+    width: 30px; height: 30px; border-radius: 999px;
+    display: grid; place-items: center; box-sizing: border-box;
+  }
+  .step[data-status="upcoming"] .marker {
+    border: 1.5px solid rgba(244,241,236,.14); background: #12161d;
+  }
+  .step[data-status="upcoming"] .marker .core {
+    width: 7px; height: 7px; border-radius: 999px; background: #2a313c;
+  }
+  .step[data-status="done"] .marker {
+    background: #3b9bff; border: 1.5px solid #3b9bff;
+    box-shadow: 0 0 0 4px rgba(59,155,255,.12);
+  }
+  .step[data-status="active"] .marker {
+    border: 1.5px solid #3b9bff; background: #0e1218;
+  }
+  .step[data-status="active"] .marker .core {
+    width: 11px; height: 11px; border-radius: 999px;
+    background: #9ecbff;
+    box-shadow: 0 0 12px 2px rgba(158,203,255,.6);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1);   box-shadow: 0 0 10px 1px rgba(158,203,255,.45); }
+    50%      { transform: scale(1.18); box-shadow: 0 0 18px 5px rgba(158,203,255,.65); }
+  }
+
+  /* entrée échelonnée de chaque étape (micro-interaction) */
+  .step { animation: stepIn .6s cubic-bezier(.16,1,.3,1) backwards; }
+  @keyframes stepIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+  .reveal { opacity: 0; transform: translateY(10px); }
+  .reveal.in { opacity: 1; transform: none; transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+
+  /* ---- État de chargement (squelette shimmer) ---- */
+  #skeleton { display: none; }
+  body.loading #skeleton { display: block; }
+  body.loading main > :not(#skeleton) { display: none; }
+  .sk {
+    display: block;
+    background: linear-gradient(90deg, rgba(244,241,236,.045) 25%, rgba(244,241,236,.10) 37%, rgba(244,241,236,.045) 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: 6px;
+  }
+  @keyframes shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .step[data-status="active"] .marker .core, .kicker::before, .sk, .step { animation: none; }
+    .reveal, .reveal.in { opacity: 1; transform: none; transition: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+
+<body class="loading min-h-screen font-sans text-ink antialiased">
+
+  <main class="mx-auto w-full max-w-md px-6 pt-14 pb-16">
+
+    <!-- Squelette de chargement (mime la structure, évite le saut visuel) -->
+    <div id="skeleton" aria-hidden="true">
+      <div class="mb-12 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="sk h-7 w-7 rounded-md"></div>
+          <div><div class="sk h-4 w-28"></div><div class="sk mt-2 h-2.5 w-20"></div></div>
+        </div>
+        <div class="sk h-6 w-24 rounded-full"></div>
+      </div>
+      <div class="mb-10">
+        <div class="sk h-3 w-24"></div>
+        <div class="sk mt-4 h-9 w-3/4"></div>
+        <div class="sk mt-2 h-9 w-1/2"></div>
+        <div class="sk mt-5 h-3 w-2/3"></div>
+      </div>
+      <div class="sk mb-10 h-28 w-full rounded-2xl"></div>
+      <div class="space-y-7">
+        <div class="flex gap-4"><div class="sk h-[30px] w-[30px] rounded-full"></div><div class="flex-1 pt-1"><div class="sk h-2.5 w-16"></div><div class="sk mt-2.5 h-5 w-2/3"></div></div></div>
+        <div class="flex gap-4"><div class="sk h-[30px] w-[30px] rounded-full"></div><div class="flex-1 pt-1"><div class="sk h-2.5 w-16"></div><div class="sk mt-2.5 h-5 w-1/2"></div></div></div>
+        <div class="flex gap-4"><div class="sk h-[30px] w-[30px] rounded-full"></div><div class="flex-1 pt-1"><div class="sk h-2.5 w-16"></div><div class="sk mt-2.5 h-5 w-3/5"></div></div></div>
+        <div class="flex gap-4"><div class="sk h-[30px] w-[30px] rounded-full"></div><div class="flex-1 pt-1"><div class="sk h-2.5 w-16"></div><div class="sk mt-2.5 h-5 w-1/2"></div></div></div>
+      </div>
+    </div>
+
+    <!-- En-tête studio -->
+    <header class="reveal mb-12 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <!-- Marque prisme PRISMAE -->
+        <svg width="30" height="28" viewBox="0 0 512 480" fill="none" class="shrink-0 drop-shadow-[0_4px_14px_rgba(59,155,255,0.3)]" aria-hidden="true">
+          <defs><linearGradient id="brandPrism" x1="256" y1="60" x2="430" y2="430" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#1b2530"/><stop offset=".5" stop-color="#3b9bff"/><stop offset=".8" stop-color="#9ecbff"/><stop offset="1" stop-color="#ffffff"/>
+          </linearGradient></defs>
+          <path fill="#f4f1ec" fill-rule="evenodd" d="M256 40 36 440H476L256 40Zm0 150 110 200H146L256 190Z"/>
+          <path fill="url(#brandPrism)" d="M256 190 366 390 462 430 256 60 256 190Z"/>
+        </svg>
+        <div>
+          <p id="studioName" class="font-display text-xl font-bold leading-none text-ink">Studio</p>
+          <p id="studioTagline" class="mt-1.5 text-[11px] uppercase tracking-[0.24em] text-accent-soft"></p>
+        </div>
+      </div>
+      <span class="kicker">Suivi live</span>
+    </header>
+
+    <!-- Hero projet -->
+    <section class="reveal mb-10">
+      <p class="mb-3 text-[11px] uppercase tracking-[0.28em] text-ink-muted">Votre projet</p>
+      <h1 id="projectTitle" class="font-display text-[2.7rem] font-bold leading-[1.0] text-ink">—</h1>
+      <p id="projectMeta" class="mt-4 font-mono text-[13px] text-accent-soft"></p>
+      <button id="shareBtn" class="mt-5 inline-flex items-center gap-2 rounded-full border border-[rgba(244,241,236,0.14)] px-4 py-2 text-sm text-ink-soft transition hover:-translate-y-0.5 hover:border-accent hover:text-ink active:scale-[.98]">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+        <span id="shareLabel">Partager le suivi</span>
+      </button>
+    </section>
+
+    <!-- Indicateur d'avancement -->
+    <section class="reveal mb-10 rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface/70 p-5">
+      <div class="flex items-end justify-between">
+        <div>
+          <p class="text-[11px] uppercase tracking-[0.2em] text-ink-muted">En ce moment</p>
+          <p id="currentLabel" class="mt-1.5 font-display text-2xl font-bold text-accent-soft">—</p>
+        </div>
+        <p id="stepCount" class="font-mono text-sm text-ink-muted">—</p>
+      </div>
+      <div class="mt-4 h-[3px] w-full overflow-hidden rounded-full bg-[rgba(244,241,236,0.08)]">
+        <div id="progressBar" class="h-full rounded-full bg-gradient-to-r from-accent to-accent-soft transition-[width] duration-700 ease-out" style="width:0%"></div>
+      </div>
+      <p id="nextStepRow" class="mt-3.5 font-mono text-xs text-ink-muted"></p>
+    </section>
+
+    <!-- Timeline -->
+    <section class="mb-10">
+      <ol id="track" class="track"></ol>
+    </section>
+
+    <!-- Note du réalisateur (optionnelle) -->
+    <section id="noteBlock" class="reveal mb-10 hidden">
+      <div class="relative rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface/70 p-5">
+        <span class="absolute -top-2.5 left-4 bg-bg px-2 text-[10px] uppercase tracking-[0.2em] text-accent">Le mot de l'équipe</span>
+        <p id="noteText" class="text-[15px] italic leading-relaxed text-ink/90"></p>
+      </div>
+    </section>
+
+    <!-- Livraison (apparaît quand le projet est livré) -->
+    <section id="deliveryBlock" class="reveal mb-10 hidden">
+      <a id="deliveryLink" href="#" target="_blank" rel="noopener"
+         class="group flex items-center justify-between rounded-2xl bg-accent px-6 py-5 text-bg shadow-[0_18px_40px_-10px_rgba(59,155,255,.55)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_55px_-12px_rgba(59,155,255,.7)] active:scale-[.99]">
+        <span>
+          <span class="block text-[11px] font-bold uppercase tracking-[0.2em] opacity-70">C'est prêt</span>
+          <span class="block font-display text-2xl font-bold">Accéder à votre livraison</span>
+        </span>
+        <svg class="h-6 w-6 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </section>
+
+    <!-- Pied de page -->
+    <footer class="reveal mt-14 border-t border-[rgba(244,241,236,0.08)] pt-6 text-center">
+      <svg width="24" height="22" viewBox="0 0 512 480" fill="none" class="mx-auto mb-3 opacity-90" aria-hidden="true">
+        <defs><linearGradient id="footPrism" x1="256" y1="60" x2="430" y2="430" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#1b2530"/><stop offset=".5" stop-color="#3b9bff"/><stop offset="1" stop-color="#ffffff"/>
+        </linearGradient></defs>
+        <path fill="#f4f1ec" fill-rule="evenodd" d="M256 40 36 440H476L256 40Zm0 150 110 200H146L256 190Z"/>
+        <path fill="url(#footPrism)" d="M256 190 366 390 462 430 256 60 256 190Z"/>
+      </svg>
+      <p id="footerStudio" class="font-display text-base font-bold text-ink/85">Studio</p>
+      <p class="mt-1.5 text-[11px] uppercase tracking-[0.22em] text-ink-muted">Production vidéo &amp; photo · La Réunion</p>
+    </footer>
+
+  </main>
+
+<script>
+/* =========================================================================
+   DONNÉES DE DÉMONSTRATION
+   En production, ces données viennent de Supabase (voir loadProject ci-dessous).
+   ========================================================================= */
+const DEMO = {
+  studio_name:    "Jérémie & Jeannette",
+  studio_tagline: "Immortels Souvenirs",
+  client_name:    "Sophie & Marc",
+  project_title:  "Votre film de mariage",
+  project_type:   "Film de mariage",
+  event_date:     "2026-05-30",
+  steps: [
+    "Tournage prévu","Tournage en cours","Tournage terminé",
+    "Tri des rushs","Montage","Finalisation","Livraison"
+  ],
+  current_step: 4,
+  step_dates: { "0":"2026-05-10","1":"2026-05-30","2":"2026-05-30","3":"2026-06-02","4":"2026-06-10" },
+  client_note: "Vos images sont magnifiques. Le montage avance très bien — je vous prépare une première version d'ici la fin de semaine.",
+  delivered:    false,
+  delivery_url: null
+};
+
+/* ----------------------------------------------------------------------- */
+const MONTHS = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+function fmtDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso + "T00:00:00");
+  return d.getDate() + " " + MONTHS[d.getMonth()] + " " + d.getFullYear();
+}
+
+function render(p) {
+  const last = p.steps.length - 1;
+  const cur  = Math.min(p.current_step, last);
+
+  document.body.classList.remove("loading");   // masque le squelette
+
+  document.getElementById("studioName").textContent    = p.studio_name;
+  document.getElementById("studioTagline").textContent = p.studio_tagline || "";
+  document.getElementById("footerStudio").textContent  = p.studio_name;
+  document.title = p.project_title + " — Suivi";
+
+  document.getElementById("projectTitle").textContent = p.project_title;
+  const metaBits = [p.client_name, p.project_type, p.event_date ? fmtDate(p.event_date) : ""].filter(Boolean);
+  document.getElementById("projectMeta").textContent = metaBits.join("  ·  ");
+
+  document.getElementById("currentLabel").textContent = p.delivered ? "Projet livré" : p.steps[cur];
+  document.getElementById("stepCount").textContent    = "Étape " + (cur + 1) + " / " + p.steps.length;
+  const pct = Math.round((cur + (p.delivered ? 1 : 0)) / p.steps.length * 100);
+  setTimeout(() => { document.getElementById("progressBar").style.width = pct + "%"; }, 250);
+
+  // Prochaine étape + livraison estimée (honnête : on n'affiche que ce qu'on sait)
+  const infoBits = [];
+  if (!p.delivered && cur < last) infoBits.push("Prochaine étape : " + p.steps[cur + 1]);
+  if (!p.delivered && p.estimated_delivery) infoBits.push("Livraison estimée " + fmtDate(p.estimated_delivery));
+  document.getElementById("nextStepRow").textContent = infoBits.join("   ·   ");
+
+  const ol = document.getElementById("track");
+  ol.innerHTML = "";
+  p.steps.forEach((name, i) => {
+    let status = "upcoming";
+    if (i < cur || (i === last && p.delivered)) status = "done";
+    else if (i === cur) status = "active";
+
+    const date  = p.step_dates && p.step_dates[i] ? fmtDate(p.step_dates[i]) : "";
+    const label = status === "done" ? "Terminé" : status === "active" ? "En cours" : "À venir";
+    const check = `<svg viewBox="0 0 24 24" fill="none" stroke="#07090c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M5 12l5 5L20 6"/></svg>`;
+
+    const li = document.createElement("li");
+    li.className = "step";
+    li.setAttribute("data-status", status);
+    li.style.animationDelay = (i * 70) + "ms";
+    li.innerHTML = `
+      <span class="marker">${status === "done" ? check : '<span class="core"></span>'}</span>
+      <div>
+        <span class="font-mono text-[10px] uppercase tracking-[0.2em] ${status==='active'?'text-accent':'text-ink-muted'}">${label}</span>
+        <h3 class="font-display text-xl font-bold leading-tight ${status==='upcoming'?'text-ink-muted':'text-ink'}">${name}</h3>
+        ${date ? `<span class="mt-0.5 block font-mono text-xs text-ink-muted">${date}</span>` : ""}
+      </div>`;
+    ol.appendChild(li);
+  });
+
+  if (p.client_note) {
+    document.getElementById("noteText").textContent = p.client_note;
+    document.getElementById("noteBlock").classList.remove("hidden");
+  }
+  if (p.delivery_url) {
+    document.getElementById("deliveryLink").href = p.delivery_url;
+    document.getElementById("deliveryBlock").classList.remove("hidden");
+  }
+
+  const items = document.querySelectorAll(".reveal");
+  items.forEach((el, i) => setTimeout(() => el.classList.add("in"), 90 * i));
+}
+
+/* =========================================================================
+   CHARGEMENT — données réelles depuis Supabase
+   --------------------------------------------------------------------------
+   Le client n'accède jamais à la table : il appelle la fonction RPC
+   get_project_by_token(token), qui ne renvoie que les champs publics.
+   Seule la clé "anon"/publishable est exposée ici (jamais la service_role).
+   ========================================================================= */
+const SUPABASE_URL  = "https://omqskfgodwycorwokwzo.supabase.co";
+const SUPABASE_ANON = "sb_publishable_G4VHv4hDJEHTRrdRFke_2w_r1Ngp7MQ";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+function showMessage(titre, detail) {
+  document.body.classList.remove("loading");
+  document.querySelector("main").innerHTML = `
+    <div class="flex min-h-[60vh] flex-col items-center justify-center text-center">
+      <p class="font-display text-3xl font-bold text-ink">${titre}</p>
+      ${detail ? `<p class="mt-3 max-w-xs font-mono text-sm text-ink-muted">${detail}</p>` : ""}
+    </div>`;
+  document.querySelectorAll(".reveal").forEach(el => el.classList.add("in"));
+}
+
+async function loadProject() {
+  const token = new URLSearchParams(location.search).get("p");
+  if (!token) {
+    showMessage("Lien invalide", "Ce lien ne contient aucun projet. Vérifiez l'adresse reçue.");
+    return;
+  }
+  const { data, error } = await sb.rpc("get_project_by_token", { token });
+  if (error) {
+    showMessage("Une erreur est survenue", "Réessayez dans un instant.");
+    console.error(error);
+    return;
+  }
+  if (!data) {
+    showMessage("Projet introuvable", "Ce projet n'existe pas ou n'est plus disponible.");
+    return;
+  }
+  render(data);
+}
+
+/* Partage : Web Share natif si dispo (mobile), sinon copie du lien */
+const shareBtn = document.getElementById("shareBtn");
+if (shareBtn) {
+  shareBtn.addEventListener("click", async () => {
+    const url = location.href;
+    if (navigator.share) {
+      try { await navigator.share({ title: document.title, url }); } catch (_) {}
+      return;
+    }
+    const label = document.getElementById("shareLabel");
+    try {
+      await navigator.clipboard.writeText(url);
+      label.textContent = "Lien copié";
+      setTimeout(() => { label.textContent = "Partager le suivi"; }, 1800);
+    } catch (_) {}
+  });
+}
+
+loadProject();
+</script>
+</body>
+</html>

@@ -95,7 +95,7 @@
 <!-- ====================== TABLEAU DE BORD ====================== -->
 <section id="dashboard" class="hidden">
   <header class="border-b border-[rgba(244,241,236,0.08)]">
-    <div class="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
+    <div class="mx-auto flex max-w-4xl flex-col items-start gap-3 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p class="font-display text-2xl font-bold leading-none text-ink">Administration</p>
         <p class="mt-1.5 text-[10px] uppercase tracking-[0.22em] text-ink-muted">Suivi de projet client</p>
@@ -134,7 +134,7 @@
 </section>
 
 <!-- ====================== MODALE : CRÉER UN PROJET ====================== -->
-<dialog id="createDialog" class="w-full max-w-lg rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface p-0 text-ink">
+<dialog id="createDialog" class="w-[calc(100%-1.5rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface p-0 text-ink">
   <form id="createForm" method="dialog" class="p-6">
     <p class="font-display text-2xl font-bold text-ink">Nouveau projet</p>
     <p class="mb-6 text-[11px] uppercase tracking-[0.18em] text-ink-muted">Le lien client est généré automatiquement</p>
@@ -196,7 +196,7 @@ Livraison</textarea>
 </dialog>
 
 <!-- ====================== MODALE : DÉTAIL PROJET ====================== -->
-<dialog id="detailDialog" class="w-full max-w-lg rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface p-0 text-ink">
+<dialog id="detailDialog" class="w-[calc(100%-1.5rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface p-0 text-ink">
   <div class="p-6">
     <div class="mb-5 flex items-start justify-between">
       <div>

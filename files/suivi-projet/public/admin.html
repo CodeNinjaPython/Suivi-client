@@ -100,9 +100,10 @@
         <p class="font-display text-2xl font-bold leading-none text-ink">Administration</p>
         <p class="mt-1.5 text-[10px] uppercase tracking-[0.22em] text-ink-muted">Suivi de projet client</p>
       </div>
-      <div class="flex items-center gap-3">
-        <button id="newProjectBtn" class="btn-or text-sm">+ Nouveau projet</button>
-        <button id="logoutBtn" class="btn-ghost text-sm">Déconnexion</button>
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="newProjectBtn" type="button" class="btn-or text-sm">+ Nouveau projet</button>
+        <button id="exportBtn" type="button" class="btn-ghost text-sm">Export CSV</button>
+        <button id="logoutBtn" type="button" class="btn-ghost text-sm">Déconnexion</button>
       </div>
     </div>
   </header>
@@ -299,6 +300,7 @@ Livraison</textarea>
     <!-- Lien + QR code -->
     <div class="mt-6 border-t border-[rgba(244,241,236,0.08)] pt-5">
       <p class="lbl">Lien client</p>
+      <p id="d_views" class="mb-3 font-mono text-[11px] text-ink-muted"></p>
       <div class="flex gap-2">
         <input id="d_link" class="field font-mono text-xs" readonly />
         <button id="d_copyBtn" class="btn-ghost shrink-0 text-sm">Copier</button>
@@ -610,11 +612,39 @@ function renderDetail() {
   $("d_deliveryUrl").value = p.delivery_url || "";
   $("d_archiveBtn").textContent = p.archived ? "Désarchiver" : "Archiver";
 
+  const views = p.view_count || 0;
+  $("d_views").textContent = views > 0
+    ? `Consulté ${views} fois${p.last_viewed_at ? " · dernière le " + new Date(p.last_viewed_at).toLocaleDateString("fr-FR") : ""}`
+    : "Pas encore consulté par le client";
+
   const link = clientLink(p.public_token);
   $("d_link").value = link;
   $("d_openLink").href = link;
   drawQR(link);
 }
+
+// Export CSV de tous les projets (compatible Excel : BOM + séparateurs)
+function csvCell(v) { return '"' + (v == null ? "" : String(v)).replace(/"/g, '""') + '"'; }
+$("exportBtn").addEventListener("click", () => {
+  const header = ["Titre","Client","Email","Type","Date évènement","Étape","Livré","Livraison estimée","Style","Archivé","Vues","Dernière vue","Lien client","Créé le"];
+  const rows = allProjects.map((p) => {
+    const steps = Array.isArray(p.steps) ? p.steps : [];
+    const stepName = p.delivered ? "Livré" : (steps[Math.min(p.current_step, steps.length - 1)] || "");
+    return [
+      p.project_title, p.client_name, p.client_email, p.project_type, p.event_date,
+      stepName, p.delivered ? "oui" : "non", p.estimated_delivery, p.style,
+      p.archived ? "oui" : "non", p.view_count ?? 0, p.last_viewed_at,
+      clientLink(p.public_token), p.created_at,
+    ].map(csvCell).join(",");
+  });
+  const csv = "﻿" + [header.map(csvCell).join(","), ...rows].join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "projets-prismae-" + new Date().toISOString().slice(0, 10) + ".csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
 
 function openDetail(p) {
   current = { ...p };

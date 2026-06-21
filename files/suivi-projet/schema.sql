@@ -24,6 +24,8 @@ create table projects (
   estimated_delivery date,                -- date de livraison estimée (optionnelle)
   style         text not null default 'prismae',  -- 'prismae' (bleu) ou 'studio' (or)
   archived      boolean not null default false,    -- projet archivé (masqué de la liste active)
+  view_count    int not null default 0,            -- nb de consultations du lien client
+  last_viewed_at timestamptz,                       -- dernière consultation
   created_at    timestamptz default now(),
   updated_at    timestamptz default now()
 );
@@ -53,3 +55,15 @@ returns json language sql security definer set search_path = public as $$
 $$;
 
 grant execute on function get_project_by_token to anon;
+
+-- Comptabilise une consultation du lien client (incrément + horodatage).
+-- Exposée au rôle anon : la page client l'appelle au chargement.
+create or replace function register_project_view(token text)
+returns void language sql security definer set search_path = public as $$
+  update projects
+    set view_count = coalesce(view_count, 0) + 1,
+        last_viewed_at = now()
+  where public_token = token;
+$$;
+
+grant execute on function register_project_view to anon;

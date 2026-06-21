@@ -414,6 +414,17 @@ async function loadProject() {
   // sert la variante dorée. Sinon (prismae / non défini), on rend le bleu ici.
   if (data.style === "studio") { location.replace("suivi-studio.html" + location.search); return; }
   render(data);
+  registerView(token);
+}
+
+// Comptabilise une consultation (une fois par session navigateur, fire-and-forget)
+function registerView(token) {
+  try {
+    const key = "viewed_" + token;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    sb.rpc("register_project_view", { token });
+  } catch (_) {}
 }
 
 /* Partage : Web Share natif si dispo (mobile), sinon copie du lien */

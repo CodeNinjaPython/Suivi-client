@@ -268,6 +268,17 @@
         if (data.style !== "studio") { location.replace("suivi.html" + location.search); return; }
 
         render(data);
+        registerView(token);
+    }
+
+    // Comptabilise une consultation (une fois par session navigateur, fire-and-forget)
+    function registerView(token) {
+        try {
+            const key = "viewed_" + token;
+            if (sessionStorage.getItem(key)) return;
+            sessionStorage.setItem(key, "1");
+            sb.rpc("register_project_view", { token });
+        } catch (_) {}
     }
 
     // Partage

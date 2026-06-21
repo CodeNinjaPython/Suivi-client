@@ -108,6 +108,9 @@
   </header>
 
   <main class="mx-auto max-w-4xl px-6 py-8">
+    <!-- Statistiques (calculées sur tous les projets) -->
+    <div id="statsBar" class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4"></div>
+
     <div class="mb-5">
       <div class="flex items-end justify-between">
         <h2 class="font-display text-xl font-bold text-accent-soft">Projets</h2>
@@ -173,6 +176,15 @@
         <select name="style" class="field">
           <option value="prismae">Bleu — PRISMAE</option>
           <option value="studio">Or — Studio (cinéma)</option>
+        </select>
+      </div>
+      <div class="sm:col-span-2">
+        <label class="lbl">Modèle de workflow</label>
+        <select id="createPreset" class="field" aria-label="Modèle de workflow">
+          <option value="">Personnalisé</option>
+          <option value="mariage">Mariage</option>
+          <option value="marque">Film de marque</option>
+          <option value="doc">Documentaire</option>
         </select>
       </div>
       <div class="sm:col-span-2">
@@ -417,7 +429,30 @@ async function loadProjects() {
     return;
   }
   allProjects = data || [];
+  renderStats();
   renderList();
+}
+
+// Statistiques sur l'ensemble des projets (indépendant des filtres)
+function renderStats() {
+  const active = allProjects.filter((p) => !p.archived);
+  const now = new Date();
+  const sameMonth = (iso) => {
+    if (!iso) return false;
+    const d = new Date(iso);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  };
+  const stats = [
+    ["En cours", active.filter((p) => !p.delivered).length],
+    ["Livrés", active.filter((p) => p.delivered).length],
+    ["Livrés ce mois", active.filter((p) => p.delivered && sameMonth(p.updated_at)).length],
+    ["Archivés", allProjects.filter((p) => p.archived).length],
+  ];
+  $("statsBar").innerHTML = stats.map(([l, v]) => `
+    <div class="rounded-xl border border-[rgba(244,241,236,0.08)] bg-surface/60 px-4 py-3">
+      <p class="font-display text-2xl font-bold text-ink">${v}</p>
+      <p class="text-[11px] uppercase tracking-wider text-ink-muted">${l}</p>
+    </div>`).join("");
 }
 
 // Applique recherche + tri + filtre archives, puis affiche les cartes
@@ -449,6 +484,11 @@ function renderList() {
     const label = p.delivered ? "Livré" : (steps[cur] || "—");
     const pct = steps.length ? Math.round((cur + (p.delivered ? 1 : 0)) / steps.length * 100) : 0;
 
+    // Badge d'inactivité : projet non livré/archivé sans mise à jour depuis 14 j+
+    const days = p.updated_at ? Math.floor((Date.now() - new Date(p.updated_at)) / 86400000) : 0;
+    const stale = !p.delivered && !p.archived && days >= 14;
+    const staleBadge = stale ? ` · <span class="text-amber-400">inactif ${days} j</span>` : "";
+
     const card = document.createElement("button");
     card.className = "block w-full rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface/70 p-5 text-left transition hover:border-accent" + (p.archived ? " opacity-60" : "");
     card.innerHTML = `
@@ -456,7 +496,7 @@ function renderList() {
         <div>
           <p class="font-display text-xl font-bold text-ink">${p.project_title}</p>
           <p class="mt-0.5 font-mono text-xs text-ink-muted">
-            ${p.client_name}${p.project_type ? " · " + p.project_type : ""}${p.event_date ? " · " + fmtDate(p.event_date) : ""} · ${p.style === "studio" ? "Or" : "Bleu"}${p.archived ? " · Archivé" : ""}
+            ${p.client_name}${p.project_type ? " · " + p.project_type : ""}${p.event_date ? " · " + fmtDate(p.event_date) : ""} · ${p.style === "studio" ? "Or" : "Bleu"}${p.archived ? " · Archivé" : ""}${staleBadge}
           </p>
         </div>
         <span class="shrink-0 rounded-full border ${p.delivered ? 'border-accent text-accent' : 'border-[rgba(244,241,236,0.12)] text-accent-soft'} px-3 py-1 font-mono text-[10px] uppercase tracking-widest">
@@ -482,6 +522,17 @@ $("showArchived").addEventListener("change", renderList);
 const createDialog = $("createDialog");
 $("newProjectBtn").addEventListener("click", () => { $("createForm").reset(); createDialog.showModal(); });
 $("createCancel").addEventListener("click", () => createDialog.close());
+
+// Modèles de workflow : remplissent les étapes selon le type de projet
+const WORKFLOW_PRESETS = {
+  mariage: ["Tournage prévu","Tournage en cours","Tournage terminé","Tri des rushs","Montage","Finalisation","Livraison"],
+  marque:  ["Brief validé","Pré-production","Tournage","Tri des rushs","Montage","Étalonnage","Finalisation","Livraison"],
+  doc:     ["Repérages","Tournage","Dérushage","Montage","Étalonnage","Mixage","Finalisation","Livraison"],
+};
+$("createPreset").addEventListener("change", (e) => {
+  const preset = WORKFLOW_PRESETS[e.target.value];
+  if (preset) $("createForm").steps.value = preset.join("\n");
+});
 
 $("createForm").addEventListener("submit", async (e) => {
   e.preventDefault();

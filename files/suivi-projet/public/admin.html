@@ -347,8 +347,12 @@ function drawQR(text) {
 /* =========================================================================
    AUTH
    ========================================================================= */
-async function refreshAuthUI() {
-  const { data: { session } } = await sb.auth.getSession();
+// IMPORTANT : ne JAMAIS rappeler sb.auth.getSession() ici. GoTrue (supabase-js)
+// sérialise l'auth avec un verrou (navigator.locks) ; appeler getSession() depuis
+// le callback onAuthStateChange provoque un INTERBLOCAGE (le bouton reste figé sur
+// « Connexion… »). On se sert de la session déjà fournie par signInWithPassword /
+// onAuthStateChange.
+function applySession(session) {
   if (session) {
     $("loginScreen").classList.add("hidden");
     $("loginScreen").classList.remove("flex");
@@ -372,7 +376,7 @@ $("loginForm").addEventListener("submit", async (e) => {
   if (btn) { btn.disabled = true; btn.textContent = "Connexion…"; btn.style.opacity = ".6"; }
 
   try {
-    const { error } = await sb.auth.signInWithPassword({
+    const { data, error } = await sb.auth.signInWithPassword({
       email: $("email").value.trim(),
       password: $("password").value,
     });
@@ -381,7 +385,7 @@ $("loginForm").addEventListener("submit", async (e) => {
       $("loginError").classList.remove("hidden");
       return;
     }
-    refreshAuthUI();
+    applySession(data.session);
   } catch (err) {
     // Erreur réseau (l'appel a échoué avant de répondre) : on ne reste plus muet.
     $("loginError").textContent = "Problème de réseau. Vérifiez votre connexion et réessayez.";
@@ -394,7 +398,7 @@ $("loginForm").addEventListener("submit", async (e) => {
 
 $("logoutBtn").addEventListener("click", async () => {
   await sb.auth.signOut();
-  refreshAuthUI();
+  applySession(null);
 });
 
 /* =========================================================================
@@ -688,8 +692,9 @@ $("d_qrDownload").addEventListener("click", () => {
 /* =========================================================================
    DÉMARRAGE
    ========================================================================= */
-sb.auth.onAuthStateChange(() => refreshAuthUI());
-refreshAuthUI();
+// La session initiale est émise par onAuthStateChange (événement INITIAL_SESSION) :
+// pas besoin d'appeler getSession() au démarrage (et on évite ainsi tout interblocage).
+sb.auth.onAuthStateChange((_event, session) => applySession(session));
 </script>
 </body>
 </html>

@@ -364,16 +364,32 @@ async function refreshAuthUI() {
 $("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   $("loginError").classList.add("hidden");
-  const { error } = await sb.auth.signInWithPassword({
-    email: $("email").value.trim(),
-    password: $("password").value,
-  });
-  if (error) {
-    $("loginError").textContent = "Connexion impossible : " + error.message;
+
+  // Retour visuel : bouton désactivé + libellé "Connexion…" (évite le double-clic
+  // et l'impression que "rien ne se passe" pendant l'appel réseau).
+  const btn = e.submitter || $("loginForm").querySelector('button[type="submit"]');
+  const label = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = "Connexion…"; btn.style.opacity = ".6"; }
+
+  try {
+    const { error } = await sb.auth.signInWithPassword({
+      email: $("email").value.trim(),
+      password: $("password").value,
+    });
+    if (error) {
+      $("loginError").textContent = "Connexion impossible : " + error.message;
+      $("loginError").classList.remove("hidden");
+      return;
+    }
+    refreshAuthUI();
+  } catch (err) {
+    // Erreur réseau (l'appel a échoué avant de répondre) : on ne reste plus muet.
+    $("loginError").textContent = "Problème de réseau. Vérifiez votre connexion et réessayez.";
     $("loginError").classList.remove("hidden");
-    return;
+    console.error(err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = label; btn.style.opacity = ""; }
   }
-  refreshAuthUI();
 });
 
 $("logoutBtn").addEventListener("click", async () => {

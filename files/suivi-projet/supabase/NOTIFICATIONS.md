@@ -1,53 +1,44 @@
-# Notifications email (Resend) — mise en place
+# Notifications email (Brevo, sans nom de domaine) — mise en place
 
 Le client reçoit un email automatique **à chaque changement d'étape** et **à la livraison**.
-La logique est dans `supabase/functions/notify/index.ts` (Edge Function), déclenchée par un
-**Database Webhook** sur la table `projects`. La clé Resend reste un **secret Supabase** : elle
-n'apparaît jamais dans le code ni dans le front.
+Logique : `supabase/functions/notify/index.ts` (Edge Function) déclenchée par un **Database
+Webhook** sur la table `projects`, qui envoie via **Brevo**. Brevo permet d'envoyer **sans
+domaine** grâce à l'« expéditeur unique vérifié » (on vérifie une adresse à soi, ex. un Gmail).
+La clé API reste un **secret Supabase**.
 
-## 0. Migration BDD (colonne email)
-Dans Supabase → SQL Editor :
-```sql
-alter table projects add column if not exists client_email text;
-```
-Puis, dans l'admin, renseigne l'email du client sur chaque projet.
+## 0. Migration BDD
+Voir le bloc SQL consolidé fourni dans le suivi (colonnes client_email / view_count /
+last_viewed_at + fonctions get_project_by_token, register_project_view, set_client_email).
 
-## 1. Compte Resend
-1. Crée un compte sur https://resend.com (gratuit jusqu'à 3 000 mails/mois).
-2. **Vérifie un domaine** (Domains → Add Domain) pour envoyer depuis `suivi@tondomaine.re`.
-   - Sans domaine, tu peux tester avec l'expéditeur `onboarding@resend.dev` (limité).
-3. Crée une **API key** (API Keys → Create) et copie-la.
+## 1. Compte Brevo
+1. Crée un compte sur https://www.brevo.com (gratuit, 300 emails/jour).
+2. **Vérifie ton expéditeur** : Settings → Senders, Domains & Dedicated IPs → **Senders** →
+   Add a sender → mets ton nom + ton email (ex. `jeremie.fv@gmail.com`) → tu reçois un email
+   de validation, clique le lien. (Aucun domaine requis.)
+3. **Clé API** : Settings → **SMTP & API** → **API Keys** → Generate a new API key → copie-la.
 
 ## 2. Secrets Supabase
-Project Settings → Edge Functions → Secrets (ou via CLI `supabase secrets set`) :
+Edge Functions → Secrets (remplace les anciens secrets Resend) :
 ```
-RESEND_API_KEY = re_xxxxxxxxxxxx
-FROM_EMAIL     = PRISMAE <suivi@tondomaine.re>     # ou "PRISMAE <onboarding@resend.dev>" pour tester
-SITE_URL       = https://TON-URL.vercel.app        # base des liens client (sans / final)
-WEBHOOK_SECRET = une-chaine-aleatoire-longue        # invente-la, on la réutilise à l'étape 4
+BREVO_API_KEY = xkeysib-xxxxxxxx
+SENDER_EMAIL  = jeremie.fv@gmail.com     # l'expéditeur VÉRIFIÉ dans Brevo
+SENDER_NAME   = PRISMAE
+SITE_URL      = https://suivi-client.vercel.app
+WEBHOOK_SECRET = (la même valeur que dans le webhook)
 ```
+(Tu peux supprimer RESEND_API_KEY et FROM_EMAIL, ils ne servent plus.)
 
-## 3. Déployer la fonction
-Nécessite le CLI Supabase (`npm i -g supabase`), connecté à ton projet :
-```bash
-supabase login
-supabase link --project-ref omqskfgodwycorwokwzo
-supabase functions deploy notify --no-verify-jwt
-```
-L'URL de la fonction sera :
-`https://omqskfgodwycorwokwzo.supabase.co/functions/v1/notify`
+## 3. Redéployer la fonction
+Edge Functions → `notify` → édite et **colle le nouveau code** de
+`supabase/functions/notify/index.ts` (version Brevo) → Deploy. (Verify JWT reste sur OFF.)
 
-## 4. Brancher le Database Webhook
-Supabase → Database → **Webhooks** → Create a new hook :
-- **Table** : `projects`
-- **Events** : `Update` (uniquement)
-- **Type** : HTTP Request → **POST**
-- **URL** : l'URL de la fonction (ci-dessus)
-- **HTTP Headers** : ajoute `x-webhook-secret` = la même valeur que `WEBHOOK_SECRET`
+## 4. Webhook
+Déjà en place (trigger `on_project_update_notify`). Rien à refaire si tu l'as créé.
 
 ## 5. Tester
-Dans l'admin, avance l'étape d'un projet qui a un email client → le client doit recevoir le mail.
-En cas de souci, regarde les logs : Supabase → Edge Functions → notify → Logs.
+Admin → un projet avec un email client → avance l'étape → Enregistrer. Le client doit
+recevoir le mail. Avec Brevo + expéditeur vérifié, l'envoi fonctionne vers **n'importe quel
+email** (pas seulement le tien). Logs : Supabase → Edge Functions → notify → Logs.
 
-> Astuce : la fonction n'envoie un mail que si l'email client est renseigné **et** si l'étape a
-> changé (ou si le projet vient d'être marqué livré). Aucun spam sur les autres modifications.
+> Délivrabilité : sans domaine, les mails partent depuis ton Gmail vérifié via Brevo ; ils
+> peuvent parfois arriver en spam. Pour une délivrabilité optimale, vérifier un domaine plus tard.

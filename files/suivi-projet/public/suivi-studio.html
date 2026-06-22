@@ -150,6 +150,13 @@
                     Poser une question
                 </button>
             </div>
+            <div id="askPanel" class="hidden bg-studio-charcoal border border-studio-border p-4 rounded-lg font-sans text-sm">
+                <p class="text-studio-muted">Une question sur votre projet ? Écrivez-nous :</p>
+                <div class="mt-2 flex flex-wrap items-center gap-3">
+                    <a id="askMailto" href="#" class="text-studio-gold underline underline-offset-2">fvjeremie@gmail.com</a>
+                    <button id="askCopy" type="button" class="border border-studio-border rounded-full px-3 py-1 text-xs text-studio-muted transition hover:border-studio-gold hover:text-studio-cream">Copier l'adresse</button>
+                </div>
+            </div>
         </div>
 
         <!-- Colonne droite : timeline verticale -->
@@ -321,7 +328,16 @@
         const title = (document.getElementById("projectTitle").textContent || "mon projet").trim();
         const subject = encodeURIComponent("Question — " + title);
         const body = encodeURIComponent("Bonjour,\n\nÀ propos de « " + title + " » :\n\n");
-        location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+        document.getElementById("askMailto").href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+        document.getElementById("askPanel").classList.toggle("hidden");
+    });
+    document.getElementById("askCopy").addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText(CONTACT_EMAIL);
+            const b = document.getElementById("askCopy");
+            b.textContent = "Copié ✓";
+            setTimeout(() => { b.textContent = "Copier l'adresse"; }, 1500);
+        } catch (_) {}
     });
 
     // Partage

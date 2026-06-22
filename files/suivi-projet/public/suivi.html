@@ -219,6 +219,13 @@
           Poser une question
         </button>
       </div>
+      <div id="askPanel" class="mt-3 hidden max-w-md rounded-xl border border-[rgba(244,241,236,0.1)] bg-surface/70 p-4 text-sm">
+        <p class="text-ink-soft">Une question sur votre projet ? Écrivez-nous :</p>
+        <div class="mt-2 flex flex-wrap items-center gap-3">
+          <a id="askMailto" href="#" class="font-mono text-accent-soft underline underline-offset-2">fvjeremie@gmail.com</a>
+          <button id="askCopy" type="button" class="rounded-full border border-[rgba(244,241,236,0.14)] px-3 py-1 text-xs text-ink-soft transition hover:border-accent hover:text-ink">Copier l'adresse</button>
+        </div>
+      </div>
     </section>
 
     <!-- Indicateur d'avancement -->
@@ -475,7 +482,16 @@ if (askBtn) {
     const title = (document.getElementById("projectTitle").textContent || "mon projet").trim();
     const subject = encodeURIComponent("Question — " + title);
     const body = encodeURIComponent("Bonjour,\n\nÀ propos de « " + title + " » :\n\n");
-    location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+    document.getElementById("askMailto").href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+    document.getElementById("askPanel").classList.toggle("hidden");
+  });
+  const askCopy = document.getElementById("askCopy");
+  if (askCopy) askCopy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(CONTACT_EMAIL);
+      askCopy.textContent = "Copié ✓";
+      setTimeout(() => { askCopy.textContent = "Copier l'adresse"; }, 1500);
+    } catch (_) {}
   });
 }
 

@@ -49,12 +49,22 @@ returns json language sql security definer set search_path = public as $$
     'project_type', project_type, 'event_date', event_date,
     'steps', steps, 'current_step', current_step, 'step_dates', step_dates,
     'client_note', client_note, 'delivered', delivered, 'delivery_url', delivery_url,
-    'estimated_delivery', estimated_delivery, 'style', style
+    'estimated_delivery', estimated_delivery, 'style', style,
+    'has_email', (client_email is not null)        -- l'email est-il déjà renseigné ? (sans l'exposer)
   )
   from projects where public_token = token;
 $$;
 
 grant execute on function get_project_by_token to anon;
+
+-- Le client peut s'inscrire lui-même aux alertes via son lien (enregistre son email).
+create or replace function set_client_email(token text, email text)
+returns void language sql security definer set search_path = public as $$
+  update projects set client_email = nullif(trim(email), '')
+  where public_token = token;
+$$;
+
+grant execute on function set_client_email to anon;
 
 -- Comptabilise une consultation du lien client (incrément + horodatage).
 -- Exposée au rôle anon : la page client l'appelle au chargement.

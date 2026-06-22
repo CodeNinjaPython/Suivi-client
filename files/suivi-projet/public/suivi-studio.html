@@ -127,6 +127,18 @@
                 <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             </a>
 
+            <!-- Opt-in alertes (si aucun email enregistré) -->
+            <div id="alertBlock" class="hidden bg-studio-charcoal border border-studio-border p-5 rounded-lg">
+                <p class="font-serif text-lg text-studio-cream">Soyez alerté de l'avancement</p>
+                <p class="mt-1 font-sans text-xs text-studio-muted">Recevez un email à chaque nouvelle étape de votre projet.</p>
+                <form id="alertForm" class="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <input id="alertEmail" type="email" required placeholder="votre@email.com"
+                        class="flex-1 bg-studio-black border border-studio-border rounded-lg px-3 py-2 font-sans text-sm text-studio-cream placeholder:text-studio-muted focus:border-studio-gold focus:outline-none" />
+                    <button type="submit" class="bg-studio-gold text-studio-black font-sans text-xs uppercase tracking-widest font-bold rounded-lg px-4 py-2 transition hover:brightness-105">M'alerter</button>
+                </form>
+                <p id="alertDone" class="mt-3 hidden font-sans text-sm text-studio-gold">Parfait, vous serez alerté à chaque étape.</p>
+            </div>
+
             <!-- Partage -->
             <button id="shareBtn" class="self-start inline-flex items-center gap-2 border border-studio-border rounded-lg px-4 py-2 font-sans text-xs uppercase tracking-widest text-studio-muted transition hover:border-studio-gold hover:text-studio-cream">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
@@ -216,6 +228,10 @@
             a.classList.remove("hidden");
             a.classList.add("flex");
         }
+        // Pas encore d'email → proposer l'inscription aux alertes
+        if (!p.has_email && !p.delivered) {
+            document.getElementById("alertBlock").classList.remove("hidden");
+        }
 
         // Timeline
         const container = document.getElementById("timeline-container");
@@ -270,6 +286,18 @@
         render(data);
         registerView(token);
     }
+
+    // Inscription du client aux alertes : enregistre son email via la RPC.
+    document.getElementById("alertForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("alertEmail").value.trim();
+        const token = new URLSearchParams(location.search).get("p");
+        if (!email || !token) return;
+        const { error } = await sb.rpc("set_client_email", { token, email });
+        if (error) { console.error(error); return; }
+        document.getElementById("alertForm").classList.add("hidden");
+        document.getElementById("alertDone").classList.remove("hidden");
+    });
 
     // Comptabilise une consultation (une fois par session navigateur, fire-and-forget)
     function registerView(token) {

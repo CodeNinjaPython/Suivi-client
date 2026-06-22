@@ -57,23 +57,33 @@ $$;
 
 grant execute on function get_project_by_token to anon;
 
--- Le client peut s'inscrire lui-même aux alertes via son lien (enregistre son email).
+-- Le client s'inscrit lui-même aux alertes via son lien. Anti-abus :
+--  · seulement si aucun email n'est déjà enregistré (pas d'écrasement d'un vrai client)
+--  · format d'email validé côté serveur, longueur bornée
+--  · seulement sur un projet actif (ni livré ni archivé)
 create or replace function set_client_email(token text, email text)
 returns void language sql security definer set search_path = public as $$
-  update projects set client_email = nullif(trim(email), '')
-  where public_token = token;
+  update projects set client_email = lower(trim(email))
+  where public_token = token
+    and client_email is null
+    and delivered = false
+    and archived = false
+    and length(email) <= 254
+    and email ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$';
 $$;
 
 grant execute on function set_client_email to anon;
 
 -- Comptabilise une consultation du lien client (incrément + horodatage).
 -- Exposée au rôle anon : la page client l'appelle au chargement.
+-- Anti-abus : un incrément max toutes les 15 s par projet (bloque les boucles de spam)
 create or replace function register_project_view(token text)
 returns void language sql security definer set search_path = public as $$
   update projects
     set view_count = coalesce(view_count, 0) + 1,
         last_viewed_at = now()
-  where public_token = token;
+  where public_token = token
+    and (last_viewed_at is null or last_viewed_at < now() - interval '15 seconds');
 $$;
 
 grant execute on function register_project_view to anon;

@@ -139,11 +139,17 @@
                 <p id="alertDone" class="mt-3 hidden font-sans text-sm text-studio-gold">Parfait, vous serez alerté à chaque étape.</p>
             </div>
 
-            <!-- Partage -->
-            <button id="shareBtn" class="self-start inline-flex items-center gap-2 border border-studio-border rounded-lg px-4 py-2 font-sans text-xs uppercase tracking-widest text-studio-muted transition hover:border-studio-gold hover:text-studio-cream">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
-                <span id="shareLabel">Partager le suivi</span>
-            </button>
+            <!-- Partage + question -->
+            <div class="flex flex-wrap gap-2">
+                <button id="shareBtn" type="button" class="inline-flex items-center gap-2 border border-studio-border rounded-lg px-4 py-2 font-sans text-xs uppercase tracking-widest text-studio-muted transition hover:border-studio-gold hover:text-studio-cream">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+                    <span id="shareLabel">Partager le suivi</span>
+                </button>
+                <button id="askBtn" type="button" class="inline-flex items-center gap-2 border border-studio-border rounded-lg px-4 py-2 font-sans text-xs uppercase tracking-widest text-studio-muted transition hover:border-studio-gold hover:text-studio-cream">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Poser une question
+                </button>
+            </div>
         </div>
 
         <!-- Colonne droite : timeline verticale -->
@@ -308,6 +314,15 @@
             sb.rpc("register_project_view", { token });
         } catch (_) {}
     }
+
+    // Poser une question : ouvre l'app mail pré-remplie. Change CONTACT_EMAIL au besoin.
+    const CONTACT_EMAIL = "fvjeremie@gmail.com";
+    document.getElementById("askBtn").addEventListener("click", () => {
+        const title = (document.getElementById("projectTitle").textContent || "mon projet").trim();
+        const subject = encodeURIComponent("Question — " + title);
+        const body = encodeURIComponent("Bonjour,\n\nÀ propos de « " + title + " » :\n\n");
+        location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+    });
 
     // Partage
     document.getElementById("shareBtn").addEventListener("click", async () => {

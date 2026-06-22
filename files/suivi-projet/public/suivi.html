@@ -209,10 +209,16 @@
       <p class="mb-3 text-[11px] uppercase tracking-[0.28em] text-ink-muted">Votre projet</p>
       <h1 id="projectTitle" class="font-display text-[2.7rem] font-bold leading-[1.0] text-ink">—</h1>
       <p id="projectMeta" class="mt-4 font-mono text-[13px] text-accent-soft"></p>
-      <button id="shareBtn" class="mt-5 inline-flex items-center gap-2 rounded-full border border-[rgba(244,241,236,0.14)] px-4 py-2 text-sm text-ink-soft transition hover:-translate-y-0.5 hover:border-accent hover:text-ink active:scale-[.98]">
-        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
-        <span id="shareLabel">Partager le suivi</span>
-      </button>
+      <div class="mt-5 flex flex-wrap gap-2">
+        <button id="shareBtn" type="button" class="inline-flex items-center gap-2 rounded-full border border-[rgba(244,241,236,0.14)] px-4 py-2 text-sm text-ink-soft transition hover:-translate-y-0.5 hover:border-accent hover:text-ink active:scale-[.98]">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+          <span id="shareLabel">Partager le suivi</span>
+        </button>
+        <button id="askBtn" type="button" class="inline-flex items-center gap-2 rounded-full border border-[rgba(244,241,236,0.14)] px-4 py-2 text-sm text-ink-soft transition hover:-translate-y-0.5 hover:border-accent hover:text-ink active:scale-[.98]">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Poser une question
+        </button>
+      </div>
     </section>
 
     <!-- Indicateur d'avancement -->
@@ -458,6 +464,19 @@ function registerView(token) {
     sessionStorage.setItem(key, "1");
     sb.rpc("register_project_view", { token });
   } catch (_) {}
+}
+
+/* Poser une question : ouvre l'app mail, pré-remplie avec le projet.
+   Change CONTACT_EMAIL pour l'adresse qui doit recevoir les questions clients. */
+const CONTACT_EMAIL = "fvjeremie@gmail.com";
+const askBtn = document.getElementById("askBtn");
+if (askBtn) {
+  askBtn.addEventListener("click", () => {
+    const title = (document.getElementById("projectTitle").textContent || "mon projet").trim();
+    const subject = encodeURIComponent("Question — " + title);
+    const body = encodeURIComponent("Bonjour,\n\nÀ propos de « " + title + " » :\n\n");
+    location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+  });
 }
 
 /* Partage : Web Share natif si dispo (mobile), sinon copie du lien */

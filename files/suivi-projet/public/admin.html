@@ -300,7 +300,11 @@ Livraison</textarea>
     <!-- Lien + QR code -->
     <div class="mt-6 border-t border-[rgba(244,241,236,0.08)] pt-5">
       <p class="lbl">Lien client</p>
-      <p id="d_views" class="mb-3 font-mono text-[11px] text-ink-muted"></p>
+      <p id="d_views" class="mb-2 font-mono text-[11px] text-ink-muted"></p>
+      <details class="mb-3">
+        <summary class="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-ink-muted">Journal des consultations</summary>
+        <div id="d_viewsLog" class="mt-2 max-h-40 space-y-1 overflow-y-auto font-mono text-[11px] text-ink-soft"></div>
+      </details>
       <div class="flex gap-2">
         <input id="d_link" class="field font-mono text-xs" readonly />
         <button id="d_copyBtn" class="btn-ghost shrink-0 text-sm">Copier</button>
@@ -646,9 +650,35 @@ $("exportBtn").addEventListener("click", () => {
   URL.revokeObjectURL(a.href);
 });
 
+// Journal des consultations : libellé appareil/navigateur à partir du user-agent
+function deviceFromUA(ua) {
+  if (!ua) return "Appareil inconnu";
+  const os = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? "Android"
+           : /Windows/.test(ua) ? "Windows" : /Mac OS X|Macintosh/.test(ua) ? "Mac"
+           : /Linux/.test(ua) ? "Linux" : "Autre";
+  const br = /Edg\//.test(ua) ? "Edge" : /CriOS|Chrome/.test(ua) ? "Chrome"
+           : /FxiOS|Firefox/.test(ua) ? "Firefox" : /Safari/.test(ua) ? "Safari" : "";
+  return os + (br ? " · " + br : "");
+}
+function fmtDateTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("fr-FR") + " à " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+async function loadViews(projectId) {
+  const box = $("d_viewsLog");
+  box.innerHTML = `<p class="text-ink-muted">Chargement…</p>`;
+  const { data, error } = await sb.from("project_views")
+    .select("viewed_at,user_agent").eq("project_id", projectId)
+    .order("viewed_at", { ascending: false }).limit(30);
+  if (error) { box.innerHTML = `<p class="text-ink-muted">Indisponible (migration à lancer ?)</p>`; return; }
+  if (!data.length) { box.innerHTML = `<p class="text-ink-muted">Aucune consultation enregistrée.</p>`; return; }
+  box.innerHTML = data.map((v) => `<p>${fmtDateTime(v.viewed_at)} · ${deviceFromUA(v.user_agent)}</p>`).join("");
+}
+
 function openDetail(p) {
   current = { ...p };
   renderDetail();
+  loadViews(p.id);
   $("d_saveStatus").classList.add("hidden");
   detailDialog.showModal();
 }

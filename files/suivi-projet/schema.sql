@@ -76,14 +76,30 @@ grant execute on function set_client_email to anon;
 
 -- Comptabilise une consultation du lien client (incrément + horodatage).
 -- Exposée au rôle anon : la page client l'appelle au chargement.
--- Anti-abus : un incrément max toutes les 15 s par projet (bloque les boucles de spam)
-create or replace function register_project_view(token text)
-returns void language sql security definer set search_path = public as $$
-  update projects
-    set view_count = coalesce(view_count, 0) + 1,
-        last_viewed_at = now()
-  where public_token = token
-    and (last_viewed_at is null or last_viewed_at < now() - interval '15 seconds');
+-- Journal des consultations (une ligne par ouverture du lien client)
+create table if not exists project_views (
+  id          bigint generated always as identity primary key,
+  project_id  uuid references projects(id) on delete cascade,
+  viewed_at   timestamptz not null default now(),
+  user_agent  text
+);
+alter table project_views enable row level security;
+-- Seul l'admin (connecté) lit le journal ; le client n'y accède pas.
+create policy "admin lit les vues" on project_views for select
+  using (auth.role() = 'authenticated');
+
+-- Compteur + journal. Anti-abus : 1 enregistrement max / 15 s par projet.
+drop function if exists register_project_view(text);
+create or replace function register_project_view(token text, ua text default null)
+returns void language plpgsql security definer set search_path = public as $$
+declare pid uuid; last timestamptz;
+begin
+  select id, last_viewed_at into pid, last from projects where public_token = token;
+  if pid is null then return; end if;
+  if last is not null and last > now() - interval '15 seconds' then return; end if;  -- throttle
+  update projects set view_count = coalesce(view_count, 0) + 1, last_viewed_at = now() where id = pid;
+  insert into project_views (project_id, user_agent) values (pid, left(ua, 400));
+end;
 $$;
 
 grant execute on function register_project_view to anon;

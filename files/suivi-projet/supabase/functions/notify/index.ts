@@ -1,15 +1,10 @@
 // =====================================================================
 // Notifications client — Supabase Edge Function (Deno) — envoi via BREVO
 // Déclenchée par un Database Webhook sur UPDATE de la table `projects`.
-// Envoie un email au client quand l'étape change ou que le projet est livré.
-// Brevo permet d'envoyer SANS nom de domaine (expéditeur unique vérifié).
+// Email responsive (tableau + styles en ligne) qui rend bien dans tous les
+// clients mail. Sans nom de domaine (expéditeur unique vérifié Brevo).
 //
-// Secrets attendus (Edge Functions → Secrets) :
-//   BREVO_API_KEY   clé API Brevo (Brevo → SMTP & API → API Keys)
-//   SENDER_EMAIL    ton email vérifié comme expéditeur dans Brevo (ex. jeremie.fv@gmail.com)
-//   SENDER_NAME     nom affiché (ex. PRISMAE)
-//   SITE_URL        base publique, ex. "https://suivi-client.vercel.app"
-//   WEBHOOK_SECRET  chaîne secrète (aussi mise dans l'en-tête du webhook)
+// Secrets : BREVO_API_KEY, SENDER_EMAIL, SENDER_NAME, SITE_URL, WEBHOOK_SECRET
 // =====================================================================
 
 const MONTHS = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
@@ -17,6 +12,9 @@ function fmtDate(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso + "T00:00:00");
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+function esc(s: string): string {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 Deno.serve(async (req) => {
@@ -41,27 +39,55 @@ Deno.serve(async (req) => {
   const stepChanged = p.current_step !== old.current_step;
   if (!justDelivered && !stepChanged) return new Response("no change", { status: 200 });
 
-  const SITE_URL = (Deno.env.get("SITE_URL") || "").replace(/\/$/, "");
+  const SITE_URL = (Deno.env.get("SITE_URL") || "https://suivi-client.vercel.app").replace(/\/$/, "");
   const link = `${SITE_URL}/suivi.html?p=${encodeURIComponent(p.public_token)}`;
-  const studio = p.studio_name || "Studio";
-  const stepName = steps[Math.min(p.current_step ?? 0, steps.length - 1)] || "";
+  const logo = `${SITE_URL}/icon-192.png`;
+  const studio = esc(p.studio_name || "Studio");
+  const title = esc(p.project_title || "votre projet");
+  const total = steps.length;
+  const cur = Math.min(p.current_step ?? 0, Math.max(total - 1, 0));
+  const stepName = esc(steps[cur] || "");
+
+  // Couleur d'accent selon le style du projet (or pour "studio", bleu sinon)
+  const isStudio = p.style === "studio";
+  const accent = isStudio ? "#c9a24a" : "#3b9bff";
+  const btnText = isStudio ? "#1a1407" : "#ffffff";
 
   const subject = justDelivered
     ? `Votre projet est livré — ${p.project_title}`
-    : `Nouvelle étape : ${stepName} — ${p.project_title}`;
+    : `Nouvelle étape : ${steps[cur] || ""} — ${p.project_title}`;
 
-  const intro = justDelivered
-    ? `Bonne nouvelle ! Votre projet « ${p.project_title} » est <strong>livré</strong>.`
-    : `Votre projet « ${p.project_title} » avance : étape <strong>${stepName}</strong>.`;
+  const eyebrow = justDelivered ? "Projet livré" : `Étape ${cur + 1} / ${total}`;
+  const heading = justDelivered
+    ? `Votre projet « ${title} » est livré.`
+    : `Votre projet « ${title} » avance : <span style="color:${accent}">${stepName}</span>.`;
 
-  const html = `
-    <div style="background:#07090c;color:#f4f1ec;font-family:Helvetica,Arial,sans-serif;padding:32px;border-radius:16px;max-width:520px;margin:auto">
-      <p style="color:#9ecbff;letter-spacing:2px;font-size:12px;text-transform:uppercase;margin:0 0 8px">${studio}</p>
-      <h1 style="font-size:24px;margin:0 0 16px">${intro}</h1>
-      ${p.estimated_delivery && !justDelivered ? `<p style="color:#a3a8b2;margin:0 0 16px">Livraison estimée : ${fmtDate(p.estimated_delivery)}</p>` : ""}
-      <a href="${link}" style="display:inline-block;background:#3b9bff;color:#07090c;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:999px">Suivre mon projet</a>
-      <p style="color:#6b7280;font-size:12px;margin:24px 0 0">${link}</p>
-    </div>`;
+  const html = `<!DOCTYPE html><html lang="fr"><body style="margin:0;background:#eef0f3;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef0f3;padding:28px 12px;font-family:Helvetica,Arial,sans-serif;">
+    <tr><td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="480" style="width:480px;max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e6e8ec;">
+        <tr><td style="padding:26px 30px 0;">
+          <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+            <td style="vertical-align:middle;"><img src="${logo}" width="40" height="40" alt="" style="display:block;border-radius:9px;"></td>
+            <td style="vertical-align:middle;padding-left:12px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${accent};">${studio}</td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:22px 30px 6px;">
+          <p style="margin:0 0 8px;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#8a909c;">${eyebrow}</p>
+          <h1 style="margin:0;font-size:22px;line-height:1.3;color:#14181f;font-weight:700;">${heading}</h1>
+          ${p.estimated_delivery && !justDelivered ? `<p style="margin:16px 0 0;font-size:14px;color:#5a616e;">Livraison estimée : <strong style="color:#14181f;">${fmtDate(p.estimated_delivery)}</strong></p>` : ""}
+        </td></tr>
+        <tr><td style="padding:22px 30px 28px;">
+          <a href="${link}" style="display:inline-block;background:${accent};color:${btnText};font-size:15px;font-weight:700;text-decoration:none;padding:13px 28px;border-radius:999px;">Suivre mon projet</a>
+          <p style="margin:18px 0 0;font-size:12px;color:#aeb3bd;word-break:break-all;">${link}</p>
+        </td></tr>
+        <tr><td style="padding:18px 30px;background:#f6f7f9;border-top:1px solid #eceef1;">
+          <p style="margin:0;font-size:13px;color:#5a616e;">${studio} · Production vidéo &amp; photo · La Réunion</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+  </body></html>`;
 
   const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",

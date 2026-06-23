@@ -53,6 +53,10 @@ Deno.serve(async (req) => {
   const accent = isStudio ? "#c9a24a" : "#3b9bff";
   const btnText = isStudio ? "#1a1407" : "#ffffff";
 
+  // Lien d'avis Google (optionnel) : par marque (style) avec repli sur REVIEW_URL
+  const reviewUrl = (isStudio ? Deno.env.get("REVIEW_URL_STUDIO") : Deno.env.get("REVIEW_URL_PRISMAE"))
+    || Deno.env.get("REVIEW_URL") || "";
+
   const subject = justDelivered
     ? `Votre projet est livré — ${p.project_title}`
     : `Nouvelle étape : ${steps[cur] || ""} — ${p.project_title}`;
@@ -77,10 +81,14 @@ Deno.serve(async (req) => {
           <h1 style="margin:0;font-size:22px;line-height:1.3;color:#14181f;font-weight:700;">${heading}</h1>
           ${p.estimated_delivery && !justDelivered ? `<p style="margin:16px 0 0;font-size:14px;color:#5a616e;">Livraison estimée : <strong style="color:#14181f;">${fmtDate(p.estimated_delivery)}</strong></p>` : ""}
         </td></tr>
-        <tr><td style="padding:22px 30px 28px;">
+        <tr><td style="padding:22px 30px ${justDelivered && reviewUrl ? "16px" : "28px"};">
           <a href="${link}" style="display:inline-block;background:${accent};color:${btnText};font-size:15px;font-weight:700;text-decoration:none;padding:13px 28px;border-radius:999px;">Suivre mon projet</a>
           <p style="margin:18px 0 0;font-size:12px;color:#aeb3bd;word-break:break-all;">${link}</p>
         </td></tr>
+        ${justDelivered && reviewUrl ? `<tr><td style="padding:0 30px 28px;">
+          <p style="margin:0 0 12px;font-size:14px;color:#5a616e;">Votre film vous a plu ? Votre avis nous aide énormément :</p>
+          <a href="${reviewUrl}" style="display:inline-block;background:#ffffff;border:1px solid ${accent};color:${accent};font-size:14px;font-weight:700;text-decoration:none;padding:11px 24px;border-radius:999px;">★ Laisser un avis Google</a>
+        </td></tr>` : ""}
         <tr><td style="padding:18px 30px;background:#f6f7f9;border-top:1px solid #eceef1;">
           <p style="margin:0;font-size:13px;color:#5a616e;">${studio} · Production vidéo &amp; photo · La Réunion</p>
         </td></tr>

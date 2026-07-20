@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Production | Studio</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+
+    <!-- Styles Tailwind compilés en local (plus de Play CDN). Build : npm run build:css -->
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- QR Code + Supabase -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body { background-color: #0B0A08; color: #EFE8D8; }
+
+        .input-dark {
+            background: #1C1810;
+            border: 1px solid #2A2418;
+            color: #EFE8D8;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .input-dark:focus {
+            border-color: #C9A24A;
+            outline: none;
+            box-shadow: 0 0 0 1px rgba(201,162,74,0.3);
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0B0A08; }
+        ::-webkit-scrollbar-thumb { background: #1C1810; border-radius: 4px; border: 1px solid #2A2418;}
+        ::-webkit-scrollbar-thumb:hover { background: #C9A24A; }
+    </style>
+</head>
+<body class="min-h-screen font-sans selection:bg-or selection:text-noir">
+
+    <!-- ================= NOTICE CONFIG (si Supabase pas configuré) ============ -->
+    <div id="configNotice" class="hidden min-h-screen grid place-items-center px-6 text-center">
+        <div class="max-w-md">
+            <h1 class="font-display text-3xl text-creme mb-3">Configuration requise</h1>
+            <p class="text-sable text-sm leading-relaxed">
+                Ouvre <span class="font-mono text-or">config.js</span> et renseigne
+                <span class="font-mono text-or">SUPABASE_URL</span> et
+                <span class="font-mono text-or">SUPABASE_ANON</span>
+                (Supabase → Project Settings → API), puis recharge la page.
+            </p>
+        </div>
+    </div>
+
+    <!-- ================= LOGIN ================================================= -->
+    <div id="loginView" class="hidden min-h-screen grid place-items-center px-6">
+        <div class="w-full max-w-sm">
+            <div class="text-center mb-10">
+                <h1 class="font-display text-4xl text-creme leading-none">Studio</h1>
+                <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-or mt-2">Console d'Admin</p>
+            </div>
+            <form id="loginForm" class="bg-charbon border border-charbon-2 rounded-2xl p-7 space-y-5 shadow-lg">
+                <div>
+                    <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-2">Email</label>
+                    <input type="email" id="login-email" required autocomplete="username" class="w-full input-dark p-3.5 rounded-xl text-sm">
+                </div>
+                <div>
+                    <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-2">Mot de passe</label>
+                    <input type="password" id="login-password" required autocomplete="current-password" class="w-full input-dark p-3.5 rounded-xl text-sm">
+                </div>
+                <p id="login-error" class="hidden text-red-400 text-xs font-mono"></p>
+                <button type="submit" id="login-btn" class="w-full bg-or hover:bg-or-clair text-noir py-3 text-xs font-mono font-medium uppercase tracking-widest rounded-lg transition-colors">
+                    Se connecter
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= APP =================================================== -->
+    <div id="appView" class="hidden min-h-screen flex flex-col md:flex-row">
+
+        <!-- Sidebar -->
+        <aside class="w-full md:w-72 bg-charbon border-r border-charbon-2 p-6 flex flex-col md:h-screen md:sticky md:top-0">
+            <div class="mb-8">
+                <h1 class="font-display text-3xl text-creme leading-none">Studio</h1>
+                <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-or mt-1">Console d'Admin</p>
+            </div>
+
+            <button id="new-project-btn" class="mb-6 w-full bg-or hover:bg-or-clair text-noir py-2.5 text-xs font-mono font-medium uppercase tracking-widest rounded-lg transition-colors">
+                + Nouveau projet
+            </button>
+
+            <p class="font-mono text-[10px] uppercase tracking-widest text-sable mb-3">Projets</p>
+            <nav id="project-list" class="flex-1 space-y-1.5 font-sans text-sm overflow-y-auto">
+                <p class="text-sable text-xs">Chargement…</p>
+            </nav>
+
+            <div class="mt-6 pt-6 border-t border-charbon-2 flex items-center justify-between">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-full bg-or flex items-center justify-center text-noir font-bold font-display text-lg shrink-0">J</div>
+                    <div class="font-sans text-sm min-w-0">
+                        <p id="user-email" class="text-creme text-xs truncate">—</p>
+                        <p class="text-sable text-[11px]">Administrateur</p>
+                    </div>
+                </div>
+                <button id="logout-btn" title="Se déconnecter" class="text-sable hover:text-or transition shrink-0 ml-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="flex-1 p-6 md:p-12 overflow-y-auto">
+
+            <!-- Aucun projet sélectionné -->
+            <div id="empty-state" class="min-h-[60vh] grid place-items-center text-center">
+                <div>
+                    <p class="font-display text-2xl text-creme mb-2">Aucun projet sélectionné</p>
+                    <p class="text-sable text-sm">Choisis un projet à gauche, ou crée-en un nouveau.</p>
+                </div>
+            </div>
+
+            <!-- Éditeur de projet -->
+            <div id="editor" class="hidden">
+                <header class="flex flex-wrap gap-4 justify-between items-end mb-10 border-b border-charbon-2 pb-6">
+                    <div>
+                        <p class="font-mono text-or text-[10px] uppercase tracking-[0.2em] mb-2">Édition du projet</p>
+                        <h2 id="editor-title" class="font-display text-3xl md:text-5xl font-bold">—</h2>
+                        <p id="editor-client" class="font-sans text-sable text-sm mt-2">—</p>
+                    </div>
+                    <button id="save-btn" class="bg-or hover:bg-or-clair text-noir px-5 py-2.5 text-xs font-mono font-medium uppercase tracking-widest rounded-lg transition-colors shadow-[0_0_15px_rgba(201,162,74,0.2)]">
+                        Sauvegarder
+                    </button>
+                </header>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                    <!-- Colonne 1-2 -->
+                    <div class="lg:col-span-2 space-y-8">
+
+                        <!-- Infos projet -->
+                        <section class="bg-charbon border border-charbon-2 rounded-2xl p-7 shadow-lg">
+                            <h3 class="font-display text-2xl mb-5 flex items-center">
+                                <span class="w-2 h-2 bg-or rounded-full mr-3 shadow-[0_0_8px_rgba(201,162,74,0.6)]"></span>
+                                Informations
+                            </h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 font-sans">
+                                <div>
+                                    <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-2">Nom du studio</label>
+                                    <input type="text" id="f-studio" class="w-full input-dark p-3 rounded-xl text-sm">
+                                </div>
+                                <div>
+                                    <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-2">Accroche (tagline)</label>
+                                    <input type="text" id="f-tagline" class="w-full input-dark p-3 rounded-xl text-sm">
+                                </div>
+                                <div>
+                                    <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-2">Client</label>
+                                    <input type="text" id="f-client" class="w-full input-dark p-3 rounded-xl text-sm">
+                                </div>
+                                <div>
+                                    <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-2">Titre du projet</label>
+                                    <input type="text" id="f-title" class="w-full input-dark p-3 rounded-xl text-sm">
+                                </div>
+                                <div>
+                                    <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-2">Type de projet</label>
+                                    <input type="text" id="f-type" class="w-full input-dark p-3 rounded-xl text-sm" placeholder="Film de mariage, Documentaire…">
+                                </div>
+                                <div>
+                                    <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-2">Date de l'événement</label>
+                                    <input type="date" id="f-date" class="w-full input-dark p-3 rounded-xl text-sm">
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Étapes -->
+                        <section class="bg-charbon border border-charbon-2 rounded-2xl p-7 shadow-lg">
+                            <h3 class="font-display text-2xl mb-5 flex items-center">
+                                <span class="w-2 h-2 bg-or rounded-full mr-3 shadow-[0_0_8px_rgba(201,162,74,0.6)]"></span>
+                                Étapes d'avancement
+                            </h3>
+                            <div class="space-y-5 font-sans">
+                                <div>
+                                    <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-2">Workflow (une étape par ligne)</label>
+                                    <textarea id="f-steps" rows="7" class="w-full input-dark p-3.5 rounded-xl text-sm font-mono leading-relaxed"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-2">Phase actuelle</label>
+                                    <div class="flex gap-3">
+                                        <select id="f-current" class="flex-1 input-dark p-3.5 rounded-xl appearance-none cursor-pointer"></select>
+                                        <button id="next-step-btn" title="Passer à l'étape suivante et sauvegarder" class="shrink-0 bg-charbon-2 hover:bg-charbon-2/60 border border-charbon-2 text-or px-4 rounded-xl text-xs font-mono uppercase tracking-widest transition-colors">
+                                            Étape suivante ▸
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Communication & Livraison -->
+                        <section class="bg-charbon border border-charbon-2 rounded-2xl p-7 shadow-lg">
+                            <h3 class="font-display text-2xl mb-5 flex items-center">
+                                <span class="w-2 h-2 bg-or rounded-full mr-3 shadow-[0_0_8px_rgba(201,162,74,0.6)]"></span>
+                                Communication & Livraison
+                            </h3>
+                            <div class="space-y-6 font-sans">
+                                <div>
+                                    <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-3">Le mot de l'équipe (visible par le client)</label>
+                                    <textarea id="f-note" rows="3" class="w-full input-dark p-3.5 rounded-xl text-sm" placeholder="Ex: Le premier montage est terminé. L'étalonnage donne une ambiance incroyable…"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-3">Lien de livraison (WeTransfer, Google Drive…)</label>
+                                    <input type="url" id="f-url" class="w-full input-dark p-3.5 rounded-xl text-sm font-mono placeholder:font-sans" placeholder="https://…">
+                                </div>
+                                <label class="flex items-center cursor-pointer group p-3 rounded-xl border border-transparent hover:border-charbon-2 hover:bg-charbon-2/30 transition">
+                                    <input type="checkbox" id="f-delivered" class="sr-only peer">
+                                    <div class="w-5 h-5 rounded border-2 border-sable peer-checked:bg-or peer-checked:border-or flex items-center justify-center transition mr-4 shrink-0">
+                                        <svg class="w-3 h-3 text-noir opacity-0 peer-checked:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                    </div>
+                                    <div>
+                                        <span class="block text-sm text-creme font-medium group-hover:text-or transition">Projet définitivement livré</span>
+                                        <span class="block text-xs text-sable mt-0.5">Affiche l'écran de fin et débloque le bouton de téléchargement.</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Colonne 3 : Partage -->
+                    <div class="space-y-8">
+                        <section class="bg-charbon border border-charbon-2 rounded-2xl p-7 text-center shadow-lg lg:sticky lg:top-12">
+                            <h3 class="font-display text-2xl mb-2">Accès Client</h3>
+                            <p class="font-sans text-xs text-sable mb-7">Partagez ce QR Code ou le lien unique.</p>
+
+                            <div class="bg-creme p-4 rounded-xl inline-block mb-7 shadow-[0_0_20px_rgba(201,162,74,0.15)]">
+                                <div id="qrcode"></div>
+                            </div>
+
+                            <div class="font-mono text-left bg-noir border border-charbon-2 p-3.5 rounded-xl flex items-center justify-between group cursor-pointer hover:border-sable transition" id="copy-link-box">
+                                <span id="client-link" class="text-[11px] text-or truncate mr-3">—</span>
+                                <button class="text-sable group-hover:text-or transition shrink-0" title="Copier le lien">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                                </button>
+                            </div>
+                            <a id="open-link" href="#" target="_blank" rel="noopener" class="mt-3 inline-block font-mono text-[10px] uppercase tracking-widest text-sable hover:text-or transition">Ouvrir la page client ↗</a>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ================= MODALE NOUVEAU PROJET ================================= -->
+    <div id="new-modal" class="hidden fixed inset-0 z-40 bg-noir/70 grid place-items-center px-6">
+        <form id="new-form" class="w-full max-w-md bg-charbon border border-charbon-2 rounded-2xl p-7 shadow-xl space-y-5">
+            <h3 class="font-display text-2xl">Nouveau projet</h3>
+            <div>
+                <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-2">Client</label>
+                <input type="text" id="new-client" required class="w-full input-dark p-3 rounded-xl text-sm" placeholder="Sophie & Marc">
+            </div>
+            <div>
+                <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-2">Titre du projet</label>
+                <input type="text" id="new-title" required class="w-full input-dark p-3 rounded-xl text-sm" placeholder="Votre film de mariage">
+            </div>
+            <div>
+                <label class="block font-mono text-[11px] text-sable uppercase tracking-widest mb-2">Type (optionnel)</label>
+                <input type="text" id="new-type" class="w-full input-dark p-3 rounded-xl text-sm" placeholder="Film de mariage">
+            </div>
+            <p id="new-error" class="hidden text-red-400 text-xs font-mono"></p>
+            <div class="flex gap-3 pt-1">
+                <button type="button" id="new-cancel" class="flex-1 border border-charbon-2 text-sable hover:text-creme py-2.5 text-xs font-mono uppercase tracking-widest rounded-lg transition">Annuler</button>
+                <button type="submit" class="flex-1 bg-or hover:bg-or-clair text-noir py-2.5 text-xs font-mono font-medium uppercase tracking-widest rounded-lg transition-colors">Créer</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 translate-y-20 opacity-0 transition-all duration-300 bg-or text-noir px-5 py-3 rounded-lg shadow-[0_5px_15px_rgba(201,162,74,0.3)] font-mono text-[11px] uppercase tracking-widest font-bold z-50 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        <span id="toast-text">Enregistré</span>
+    </div>
+
+    <!-- Config partagée -->
+    <script src="config.js"></script>
+    <script>
+    /* ===================================================================== */
+    const DEFAULT_STEPS = ["Tournage prévu","Tournage en cours","Tournage terminé","Tri des rushs","Montage","Finalisation","Livraison"];
+
+    const el  = (id) => document.getElementById(id);
+    const show = (id) => el(id).classList.remove("hidden");
+    const hide = (id) => el(id).classList.add("hidden");
+
+    const state = { projects: [], current: null };
+    let sb = null;
+
+    /* ---- Vues ---------------------------------------------------------- */
+    function view(name) {
+        ["configNotice","loginView","appView"].forEach(hide);
+        show(name);
+    }
+
+    /* ---- Toast --------------------------------------------------------- */
+    let toastTimer = null;
+    function toast(msg, isError) {
+        el("toast-text").textContent = msg;
+        const t = el("toast");
+        t.classList.toggle("bg-red-500", !!isError);
+        t.classList.toggle("bg-or", !isError);
+        t.classList.remove("translate-y-20","opacity-0");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.add("translate-y-20","opacity-0"), 3000);
+    }
+
+    /* ---- Lien client --------------------------------------------------- */
+    function clientLink(token) {
+        return new URL("suivi.html?p=" + encodeURIComponent(token), location.href).href;
+    }
+
+    /* ===================================================================== */
+    /* AUTH                                                                  */
+    /* ===================================================================== */
+    async function initAuth() {
+        const { data: { session } } = await sb.auth.getSession();
+        session ? enterApp(session) : view("loginView");
+
+        sb.auth.onAuthStateChange((_evt, session) => {
+            if (session) enterApp(session);
+            else view("loginView");
+        });
+    }
+
+    el("loginForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        hide("login-error");
+        el("login-btn").disabled = true;
+        el("login-btn").textContent = "Connexion…";
+        const { error } = await sb.auth.signInWithPassword({
+            email: el("login-email").value.trim(),
+            password: el("login-password").value,
+        });
+        el("login-btn").disabled = false;
+        el("login-btn").textContent = "Se connecter";
+        if (error) {
+            el("login-error").textContent = "Connexion refusée. Vérifiez vos identifiants.";
+            show("login-error");
+        }
+    });
+
+    el("logout-btn").addEventListener("click", () => sb.auth.signOut());
+
+    async function enterApp(session) {
+        view("appView");
+        el("user-email").textContent = session.user.email || "Connecté";
+        await loadProjects();
+    }
+
+    /* ===================================================================== */
+    /* PROJETS                                                               */
+    /* ===================================================================== */
+    async function loadProjects(selectId) {
+        const { data, error } = await sb
+            .from("projects")
+            .select("*")
+            .order("updated_at", { ascending: false });
+        if (error) { toast("Erreur de chargement", true); return; }
+        state.projects = data || [];
+        renderList();
+        if (selectId) selectProject(selectId);
+        else if (state.current) {
+            const still = state.projects.find(p => p.id === state.current.id);
+            still ? selectProject(still.id) : clearEditor();
+        }
+    }
+
+    function renderList() {
+        const nav = el("project-list");
+        nav.innerHTML = "";
+        if (!state.projects.length) {
+            nav.innerHTML = '<p class="text-sable text-xs">Aucun projet pour l’instant.</p>';
+            return;
+        }
+        state.projects.forEach(p => {
+            const active = state.current && state.current.id === p.id;
+            const a = document.createElement("button");
+            a.className = "w-full text-left py-2.5 px-3 rounded-r border-l-2 transition " +
+                (active ? "bg-charbon-2/50 text-or border-or" : "text-sable hover:text-creme border-transparent");
+            const title = document.createElement("span");
+            title.className = "block truncate text-creme/90";
+            title.textContent = p.project_title || "(sans titre)";
+            const sub = document.createElement("span");
+            sub.className = "block truncate text-[11px] text-sable font-mono mt-0.5";
+            sub.textContent = (p.client_name || "") + (p.delivered ? " · livré" : "");
+            a.appendChild(title); a.appendChild(sub);
+            a.addEventListener("click", () => selectProject(p.id));
+            nav.appendChild(a);
+        });
+    }
+
+    function clearEditor() {
+        state.current = null;
+        hide("editor"); show("empty-state");
+        renderList();
+    }
+
+    function selectProject(id) {
+        const p = state.projects.find(x => x.id === id);
+        if (!p) return;
+        state.current = p;
+        hide("empty-state"); show("editor");
+        renderList();
+
+        el("editor-title").textContent  = p.project_title || "(sans titre)";
+        el("editor-client").textContent = "Client : " + (p.client_name || "—");
+
+        el("f-studio").value  = p.studio_name || "";
+        el("f-tagline").value = p.studio_tagline || "";
+        el("f-client").value  = p.client_name || "";
+        el("f-title").value   = p.project_title || "";
+        el("f-type").value    = p.project_type || "";
+        el("f-date").value    = p.event_date || "";
+        el("f-steps").value   = (Array.isArray(p.steps) ? p.steps : DEFAULT_STEPS).join("\n");
+        rebuildStepSelect(p.current_step || 0);
+        el("f-note").value    = p.client_note || "";
+        el("f-url").value     = p.delivery_url || "";
+        el("f-delivered").checked = !!p.delivered;
+
+        const link = clientLink(p.public_token);
+        el("client-link").textContent = link;
+        el("open-link").href = link;
+        renderQR(link);
+    }
+
+    function currentSteps() {
+        return el("f-steps").value.split("\n").map(s => s.trim()).filter(Boolean);
+    }
+
+    function rebuildStepSelect(current) {
+        const steps = currentSteps();
+        const sel = el("f-current");
+        const prev = current != null ? current : parseInt(sel.value, 10) || 0;
+        sel.innerHTML = "";
+        steps.forEach((name, i) => {
+            const o = document.createElement("option");
+            o.value = i; o.textContent = (i + 1) + ". " + name;
+            sel.appendChild(o);
+        });
+        sel.value = Math.min(Math.max(0, prev), Math.max(0, steps.length - 1));
+    }
+
+    el("f-steps").addEventListener("input", () => rebuildStepSelect());
+
+    /* ---- QR ------------------------------------------------------------ */
+    function renderQR(link) {
+        const box = el("qrcode");
+        box.innerHTML = "";
+        new QRCode(box, {
+            text: link, width: 150, height: 150,
+            colorDark: "#14110C", colorLight: "#EFE8D8",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
+
+    /* ---- Copier -------------------------------------------------------- */
+    el("copy-link-box").addEventListener("click", () => {
+        const link = el("client-link").textContent;
+        if (!link || link === "—") return;
+        navigator.clipboard.writeText(link).then(() => toast("Lien copié"));
+    });
+
+    /* ---- Sauvegarde ---------------------------------------------------- */
+    function collectForm() {
+        const steps = currentSteps();
+        const current_step = Math.min(parseInt(el("f-current").value, 10) || 0, Math.max(0, steps.length - 1));
+        const step_dates = Object.assign({}, state.current.step_dates || {});
+        const today = new Date().toISOString().slice(0, 10);
+        if (step_dates[current_step] == null) step_dates[current_step] = today; // horodate l'étape atteinte
+        return {
+            studio_name:    el("f-studio").value.trim() || null,
+            studio_tagline: el("f-tagline").value.trim() || null,
+            client_name:    el("f-client").value.trim(),
+            project_title:  el("f-title").value.trim(),
+            project_type:   el("f-type").value.trim() || null,
+            event_date:     el("f-date").value || null,
+            steps,
+            current_step,
+            step_dates,
+            client_note:    el("f-note").value.trim() || null,
+            delivery_url:   el("f-url").value.trim() || null,
+            delivered:      el("f-delivered").checked,
+        };
+    }
+
+    async function saveCurrent() {
+        if (!state.current) return;
+        const payload = collectForm();
+        if (!payload.client_name || !payload.project_title) {
+            toast("Client et titre sont requis", true); return;
+        }
+        el("save-btn").disabled = true;
+        el("save-btn").textContent = "…";
+        const { error } = await sb.from("projects").update(payload).eq("id", state.current.id);
+        el("save-btn").disabled = false;
+        el("save-btn").textContent = "Sauvegarder";
+        if (error) { toast("Erreur : " + error.message, true); return; }
+        toast("Projet sauvegardé");
+        await loadProjects(state.current.id);
+    }
+
+    el("save-btn").addEventListener("click", saveCurrent);
+
+    el("next-step-btn").addEventListener("click", () => {
+        const sel = el("f-current");
+        const steps = currentSteps();
+        let n = parseInt(sel.value, 10) || 0;
+        if (n < steps.length - 1) n++;
+        sel.value = n;
+        saveCurrent();
+    });
+
+    /* ---- Nouveau projet ------------------------------------------------ */
+    el("new-project-btn").addEventListener("click", () => {
+        el("new-form").reset(); hide("new-error"); show("new-modal");
+        el("new-client").focus();
+    });
+    el("new-cancel").addEventListener("click", () => hide("new-modal"));
+    el("new-modal").addEventListener("click", (e) => { if (e.target === el("new-modal")) hide("new-modal"); });
+
+    el("new-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        hide("new-error");
+        const row = {
+            client_name:   el("new-client").value.trim(),
+            project_title: el("new-title").value.trim(),
+            project_type:  el("new-type").value.trim() || null,
+            steps: DEFAULT_STEPS,
+        };
+        const { data, error } = await sb.from("projects").insert(row).select().single();
+        if (error) {
+            el("new-error").textContent = "Erreur : " + error.message;
+            show("new-error"); return;
+        }
+        hide("new-modal");
+        toast("Projet créé");
+        await loadProjects(data.id);
+    });
+
+    /* ===================================================================== */
+    /* DÉMARRAGE                                                             */
+    /* ===================================================================== */
+    (function start() {
+        const cfg = window.APP_CONFIG || {};
+        const configured = cfg.SUPABASE_URL && !cfg.SUPABASE_URL.includes("TON-PROJET")
+                           && cfg.SUPABASE_ANON && !cfg.SUPABASE_ANON.includes("TA_CLE");
+        if (!configured) { view("configNotice"); return; }
+        sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON);
+        initAuth();
+    })();
+    </script>
+</body>
+</html>

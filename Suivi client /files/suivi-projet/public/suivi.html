@@ -5,30 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Suivi de votre projet</title>
 
-<!-- Tailwind (Play CDN pour la preview ; en prod, utilise le build Tailwind) -->
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          noir:        '#0B0A08',
-          charbon:     '#14110C',
-          'charbon-2': '#1C1810',
-          or:          '#C9A24A',
-          'or-clair':  '#E6CD93',
-          creme:       '#EFE8D8',
-          sable:       '#8C8473',
-        },
-        fontFamily: {
-          display: ['"Cormorant Garamond"', 'serif'],
-          sans:    ['"DM Sans"', 'sans-serif'],
-          mono:    ['"DM Mono"', 'monospace'],
-        },
-      },
-    },
-  };
-</script>
+<!-- Styles Tailwind compilés en local (plus de Play CDN). Build : npm run build:css -->
+<link rel="stylesheet" href="styles.css" />
 
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap');
@@ -36,12 +14,11 @@
   :root { color-scheme: dark; }
   html { scroll-behavior: smooth; }
   body {
-    background:
-      radial-gradient(120% 90% at 50% -10%, #1C1810 0%, #0B0A08 55%, #060504 100%);
+    background: radial-gradient(120% 90% at 50% -10%, #1C1810 0%, #0B0A08 55%, #060504 100%);
     background-attachment: fixed;
   }
 
-  /* Texture grain très discrète, façon pellicule */
+  /* Texture grain très discrète */
   body::before {
     content: "";
     position: fixed; inset: 0;
@@ -50,28 +27,27 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
-  /* ---- Timeline : la signature ---- */
+  /* ---- Timeline ---- */
   .track { position: relative; }
 
   .step { position: relative; padding-left: 3.25rem; padding-bottom: 2.25rem; }
   .step:last-child { padding-bottom: 0; }
 
-  /* le rail vertical qui relie les étapes */
+  /* Rail vertical */
   .step::before {
     content: "";
     position: absolute;
-    left: 0.9375rem;            /* centre du marqueur (15px) */
+    left: 0.9375rem;
     top: 1.6rem;
     bottom: -0.65rem;
     width: 2px;
     background: #2A2418;
   }
   .step:last-child::before { display: none; }
-  /* portion "lue" du rail : doré jusqu'à l'étape atteinte */
   .step[data-status="done"]::before { background: linear-gradient(#C9A24A, #C9A24A); }
   .step[data-status="active"]::before { background: linear-gradient(#C9A24A, #2A2418); }
 
-  /* marqueurs */
+  /* Marqueurs */
   .marker {
     position: absolute; left: 0; top: 0.15rem;
     width: 30px; height: 30px; border-radius: 999px;
@@ -102,7 +78,7 @@
     50%      { transform: scale(1.18); box-shadow: 0 0 18px 5px rgba(230,205,147,.65); }
   }
 
-  /* révélation au chargement */
+  /* Révélation au chargement */
   .reveal { opacity: 0; transform: translateY(10px); }
   .reveal.in { opacity: 1; transform: none; transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
 
@@ -116,7 +92,15 @@
 
 <body class="min-h-screen font-sans text-creme antialiased">
 
-  <main class="mx-auto w-full max-w-md px-6 pt-14 pb-16">
+  <!-- État chargement / erreur (affiché uniquement en mode Supabase) -->
+  <div id="stateOverlay" class="hidden fixed inset-0 z-50 grid place-items-center px-8 text-center">
+    <div>
+      <p id="stateText" class="font-display text-2xl text-creme">Chargement…</p>
+      <p id="stateSub" class="mt-2 font-mono text-[11px] uppercase tracking-[0.24em] text-sable"></p>
+    </div>
+  </div>
+
+  <main id="mainView" class="mx-auto w-full max-w-md px-6 pt-14 pb-16">
 
     <!-- En-tête studio -->
     <header class="reveal mb-12 flex items-center justify-between">
@@ -132,7 +116,7 @@
     <!-- Hero projet -->
     <section class="reveal mb-10">
       <p class="mb-3 text-[11px] uppercase tracking-[0.3em] text-sable">Votre projet</p>
-      <h1 id="projectTitle" class="font-display text-[2.7rem] font-600 leading-[1.05] text-creme">—</h1>
+      <h1 id="projectTitle" class="font-display text-[2.7rem] font-bold leading-[1.05] text-creme">—</h1>
       <p id="projectMeta" class="mt-3 font-mono text-[13px] text-or-clair"></p>
     </section>
 
@@ -169,7 +153,7 @@
          class="group flex items-center justify-between rounded-2xl bg-gradient-to-r from-or to-or-clair px-6 py-5 text-noir shadow-[0_8px_30px_-8px_rgba(201,162,74,.5)] transition-transform active:scale-[.99]">
         <span>
           <span class="block text-[11px] font-bold uppercase tracking-[0.22em] opacity-70">C'est prêt</span>
-          <span class="block font-display text-2xl font-600">Accéder à votre livraison</span>
+          <span class="block font-display text-2xl font-bold">Accéder à la livraison</span>
         </span>
         <svg class="h-6 w-6 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
@@ -183,10 +167,14 @@
 
   </main>
 
+<!-- Config Supabase partagée + SDK -->
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* =========================================================================
    DONNÉES DE DÉMONSTRATION
-   En production, ces données viennent de Supabase (voir bloc tout en bas).
+   Utilisées quand la page est ouverte sans token (?p=...) ou tant que
+   Supabase n'est pas configuré dans config.js. Pratique pour prévisualiser.
    ========================================================================= */
 const DEMO = {
   studio_name:    "Jérémie & Jeannette",
@@ -222,12 +210,13 @@ const MONTHS = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sep
 function fmtDate(iso) {
   if (!iso) return "";
   const d = new Date(iso + "T00:00:00");
+  if (isNaN(d)) return "";
   return d.getDate() + " " + MONTHS[d.getMonth()] + " " + d.getFullYear();
 }
 
 function render(p) {
   const last = p.steps.length - 1;
-  const cur  = Math.min(p.current_step, last);
+  const cur  = Math.max(0, Math.min(p.current_step, last));
 
   // En-tête / pied
   document.getElementById("studioName").textContent    = p.studio_name;
@@ -261,13 +250,17 @@ function render(p) {
     const li = document.createElement("li");
     li.className = "step";
     li.setAttribute("data-status", status);
+    // Les libellés d'étapes viennent de l'admin : on les insère en texte (pas d'injection HTML)
+    const labelSpan = `<span class="font-mono text-[10px] uppercase tracking-[0.22em] ${status==='active'?'text-or':'text-sable'}"></span>`;
     li.innerHTML = `
       <span class="marker">${status === "done" ? check : '<span class="core"></span>'}</span>
       <div>
-        <span class="font-mono text-[10px] uppercase tracking-[0.22em] ${status==='active'?'text-or':'text-sable'}">${label}</span>
-        <h3 class="font-display text-xl leading-tight ${status==='upcoming'?'text-sable':'text-creme'}">${name}</h3>
+        ${labelSpan}
+        <h3 class="font-display text-xl leading-tight ${status==='upcoming'?'text-sable':'text-creme'}"></h3>
         ${date ? `<span class="mt-0.5 block font-mono text-xs text-sable">${date}</span>` : ""}
       </div>`;
+    li.querySelector("span.font-mono").textContent = label;
+    li.querySelector("h3").textContent = name;
     ol.appendChild(li);
   });
 
@@ -277,8 +270,8 @@ function render(p) {
     document.getElementById("noteBlock").classList.remove("hidden");
   }
 
-  // Livraison
-  if (p.delivery_url) {
+  // Livraison : visible seulement si un lien existe ET (projet livré OU dernière étape atteinte)
+  if (p.delivery_url && (p.delivered || cur === last)) {
     document.getElementById("deliveryLink").href = p.delivery_url;
     document.getElementById("deliveryBlock").classList.remove("hidden");
   }
@@ -289,30 +282,45 @@ function render(p) {
 }
 
 /* =========================================================================
-   CHARGEMENT
+   ÉTAT (chargement / erreur) pour le mode Supabase
    ========================================================================= */
-render(DEMO);
+function showState(text, sub) {
+  document.getElementById("mainView").classList.add("hidden");
+  document.getElementById("stateText").textContent = text;
+  document.getElementById("stateSub").textContent  = sub || "";
+  document.getElementById("stateOverlay").classList.remove("hidden");
+}
+function hideState() {
+  document.getElementById("stateOverlay").classList.add("hidden");
+  document.getElementById("mainView").classList.remove("hidden");
+}
 
 /* =========================================================================
-   >>> INTÉGRATION SUPABASE (à activer en production) <<<
-   --------------------------------------------------------------------------
-   1) Ajoute dans le <head> :
-      <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-   2) Remplace l'appel render(DEMO) ci-dessus par loadProject() :
-
-   const SUPABASE_URL  = "https://TON-PROJET.supabase.co";
-   const SUPABASE_ANON = "ta-cle-anon-publique";
-   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-
-   async function loadProject() {
-     const token = new URLSearchParams(location.search).get("p");
-     if (!token) { document.body.innerHTML = "<p style='padding:2rem'>Lien invalide.</p>"; return; }
-     const { data, error } = await sb.rpc("get_project_by_token", { token });
-     if (error || !data) { document.body.innerHTML = "<p style='padding:2rem'>Projet introuvable.</p>"; return; }
-     render(data);
-   }
-   loadProject();
+   CHARGEMENT
    ========================================================================= */
+async function boot() {
+  const cfg   = window.APP_CONFIG || {};
+  const token = new URLSearchParams(location.search).get("p");
+  const configured = cfg.SUPABASE_URL && !cfg.SUPABASE_URL.includes("TON-PROJET");
+
+  // Sans token, ou tant que Supabase n'est pas configuré : mode démo.
+  if (!token || !configured) { render(DEMO); return; }
+
+  showState("Chargement…");
+  try {
+    const sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON);
+    const { data, error } = await sb.rpc("get_project_by_token", { token });
+    if (error) throw error;
+    if (!data) { showState("Projet introuvable", "Vérifiez votre lien"); return; }
+    hideState();
+    render(data);
+  } catch (e) {
+    console.error(e);
+    showState("Chargement impossible", "Réessayez dans un instant");
+  }
+}
+
+boot();
 </script>
 </body>
 </html>

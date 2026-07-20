@@ -43,9 +43,17 @@ suivi-projet/
 ├─ CLAUDE.md          ← ce fichier (contexte projet)
 ├─ README.md          ← démarrage rapide
 ├─ schema.sql         ← schéma BDD + politiques RLS + fonction RPC (à coller dans Supabase)
-└─ public/
-   ├─ suivi.html      ← page CLIENT (FAITE — branchement Supabase à activer)
-   └─ admin.html      ← interface ADMIN (À CRÉER)
+├─ package.json       ← build Tailwind (scripts build:css / watch:css)
+├─ tailwind.config.js ← thème (couleurs + typo) et fichiers scannés
+├─ netlify.toml       ← config de déploiement Netlify
+├─ vercel.json        ← config de déploiement Vercel
+├─ src/
+│  └─ input.css       ← entrée Tailwind (@tailwind base/components/utilities)
+└─ public/            ← dossier publié (statique)
+   ├─ config.js       ← config Supabase PARTAGÉE (URL + clé anon) — à renseigner
+   ├─ styles.css      ← CSS Tailwind COMPILÉ (généré, ne pas éditer à la main)
+   ├─ suivi.html      ← page CLIENT (FAITE — branchée Supabase, repli démo)
+   └─ admin.html      ← interface ADMIN (FAITE — auth, CRUD, lien + QR)
 ```
 
 ---
@@ -110,20 +118,32 @@ Identité « cinéma » sombre et premium, inspirée des pages produit Apple/DJI
 ## État du projet
 
 ### Fait
-- [x] Schéma BDD + RLS + fonction RPC (`schema.sql`).
-- [x] Page client `public/suivi.html` (responsive, données de démo, charte appliquée).
-      Le bloc d'intégration Supabase est présent en commentaire en bas du fichier.
+- [x] Schéma BDD + RLS + fonction RPC (`schema.sql`). Token client en **hex** (URL-safe)
+      et trigger `updated_at` automatique.
+- [x] Page client `public/suivi.html` : **branchée Supabase** (`config.js` + RPC
+      `get_project_by_token`), avec repli sur les données de démo si non configuré
+      ou sans `?p=`, plus états chargement/erreur.
+- [x] Interface admin `public/admin.html` : **login Supabase Auth**, liste des projets,
+      création (le `public_token` est généré par la BDD), édition complète
+      (infos, workflow, note, lien, `delivered`), bouton **« Étape suivante »**
+      (avance + horodate `step_dates` + sauvegarde), **lien + QR code générés
+      dynamiquement** par projet.
+- [x] **Build Tailwind** en place (`package.json`, `tailwind.config.js`, `src/input.css`)
+      → `public/styles.css` compilé et minifié. **Plus de Play CDN.**
+- [x] Config de déploiement statique : `netlify.toml` et `vercel.json`.
+- [x] Consolidation : une seule source (anciens doublons supprimés).
 
-### À faire (par ordre suggéré)
-1. **Brancher la page client sur Supabase** : créer le projet Supabase, exécuter
-   `schema.sql`, puis remplacer `render(DEMO)` par `loadProject()` (clés URL + anon
-   dans `suivi.html`). Ajouter le script `@supabase/supabase-js`.
-2. **Interface admin `public/admin.html`** : login Supabase Auth ; liste des projets ;
-   création d'un projet (génère le `public_token`) ; bouton « étape suivante » qui
-   met à jour `current_step` + horodate `step_dates` ; bascule `delivered` + saisie
-   `delivery_url` et `client_note` ; **génération du lien + QR code** du client.
-3. **Déploiement** Vercel/Netlify + passage au **build Tailwind** (sortir du CDN).
-4. (Option) Table `step_history` ou notifications email à la livraison.
+### Reste à faire (côté toi, hors code)
+1. **Créer le projet Supabase**, exécuter `schema.sql`, puis renseigner
+   `public/config.js` (URL + clé **anon**). Créer ton compte admin dans
+   Supabase → Authentication → Users.
+2. **Déployer** `suivi-projet/` sur Netlify ou Vercel (les configs sont prêtes).
+3. (Option) Table `step_history` ou notification email à la livraison.
+
+### Rappels build
+- Après toute modification de classes Tailwind dans les `.html`, relancer
+  `npm run build:css` (ou `npm run watch:css` en développement) pour régénérer
+  `public/styles.css`. Netlify/Vercel le régénèrent aussi au déploiement.
 
 ---
 

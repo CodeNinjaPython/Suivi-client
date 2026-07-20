@@ -3,10 +3,15 @@
 -- À coller dans : Supabase → SQL Editor → New query → Run
 -- =====================================================================
 
+-- Extension pour gen_random_bytes / gen_random_uuid (souvent déjà active)
+create extension if not exists pgcrypto;
+
 -- Table des projets
 create table projects (
   id            uuid primary key default gen_random_uuid(),
-  public_token  text unique not null default encode(gen_random_bytes(9), 'base64'),
+  -- Token du lien client : encodage HEX (0-9 a-f uniquement) donc 100% URL-safe.
+  -- 12 octets = 24 caractères, 96 bits d'entropie (non devinable).
+  public_token  text unique not null default encode(gen_random_bytes(12), 'hex'),
   studio_name   text not null default 'Jérémie & Jeannette',
   studio_tagline text default 'Immortels Souvenirs',
   client_name   text not null,
@@ -23,6 +28,19 @@ create table projects (
   created_at    timestamptz default now(),
   updated_at    timestamptz default now()
 );
+
+-- Met à jour updated_at automatiquement à chaque modification
+create or replace function set_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create trigger projects_updated_at
+  before update on projects
+  for each row execute function set_updated_at();
 
 -- Sécurité : on active RLS (rien n'est lisible par défaut)
 alter table projects enable row level security;

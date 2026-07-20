@@ -1,0 +1,4 @@
+# Déploiement Netlify : compile le CSS puis publie le dossier public/
+[build]
+  command = "npm run build:css"
+  publish = "public"

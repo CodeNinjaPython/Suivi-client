@@ -1,0 +1,13 @@
+{
+  "name": "suivi-projet",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Suivi de projet client - production vidéo & photo (La Réunion)",
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/input.css -o ./public/styles.css --minify",
+    "watch:css": "tailwindcss -i ./src/input.css -o ./public/styles.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}

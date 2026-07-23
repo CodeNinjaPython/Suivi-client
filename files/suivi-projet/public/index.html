@@ -71,9 +71,23 @@
     <a href="admin.html" class="mt-12 text-xs uppercase tracking-[0.2em] text-ink-muted transition hover:text-accent-soft">Espace admin</a>
   </main>
 <script>
-  // Service worker (PWA installable + chargement instantané en visite répétée)
+  // Service worker : PWA installable + MISE À JOUR AUTOMATIQUE (recharge quand une
+  // nouvelle version prend le contrôle, sans réinstaller l'app).
   if ("serviceWorker" in navigator) {
-    addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController || reloaded) return;
+      reloaded = true;
+      location.reload();
+    });
+    addEventListener("load", async () => {
+      try {
+        const reg = await navigator.serviceWorker.register("/sw.js");
+        reg.update();
+        setInterval(() => reg.update(), 60 * 60 * 1000);
+      } catch (_) {}
+    });
   }
 </script>
 <!-- Vercel Web Analytics — trafic des pages, sans cookie (RGPD-friendly) -->

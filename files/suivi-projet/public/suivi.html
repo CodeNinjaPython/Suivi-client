@@ -483,8 +483,8 @@ if (gateForm) {
   });
 }
 
-// Démarrage : admin connecté ou email déjà saisi → on charge directement ; sinon, porte.
-async function boot() {
+// Démarrage : admin actif ou email déjà saisi → on charge directement ; sinon, porte.
+function boot() {
   const token = new URLSearchParams(location.search).get("p");
   currentToken = token;
   if (!token) {
@@ -492,8 +492,8 @@ async function boot() {
     return;
   }
   let unlocked = false;
-  // Admin connecté (session Supabase partagée avec admin.html) → jamais de porte pour toi.
-  try { const { data } = await sb.auth.getSession(); if (data && data.session) unlocked = true; } catch (_) {}
+  // Admin actif récemment (drapeau posé par admin.html) → jamais de porte pour toi.
+  try { const until = parseInt(localStorage.getItem("sc_admin_until") || "0", 10); if (until > Date.now()) unlocked = true; } catch (_) {}
   // Sinon : email déjà saisi sur cet appareil ?
   if (!unlocked) { try { unlocked = !!localStorage.getItem(gateKey(token)); } catch (_) {} }
   if (unlocked) { loadProject(); return; }
@@ -552,9 +552,24 @@ if (shareBtn) {
 
 boot();
 
-// Service worker (PWA installable + chargement instantané en visite répétée)
+// Service worker : PWA installable + MISE À JOUR AUTOMATIQUE.
+// Recharge la page quand une nouvelle version prend le contrôle → l'app se met
+// à jour toute seule, sans avoir à la retirer/réajouter à l'écran d'accueil.
 if ("serviceWorker" in navigator) {
-  addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController || reloaded) return;   // pas de rechargement à la 1re installation
+    reloaded = true;
+    location.reload();
+  });
+  addEventListener("load", async () => {
+    try {
+      const reg = await navigator.serviceWorker.register("/sw.js");
+      reg.update();
+      setInterval(() => reg.update(), 60 * 60 * 1000);   // revérifie une fois par heure
+    } catch (_) {}
+  });
 }
 </script>
 <!-- Vercel Web Analytics — trafic des pages, sans cookie (RGPD-friendly) -->

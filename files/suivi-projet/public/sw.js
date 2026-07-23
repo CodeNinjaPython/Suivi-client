@@ -12,7 +12,7 @@
    ⚠️ Incrémente VERSION quand des assets (CSS/polices/icônes) changent, pour
       forcer le renouvellement du cache.
    ========================================================================= */
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = "suivi-" + VERSION;
 const CORE = ["./", "./suivi.html", "./styles.css", "./styles-studio.css", "./fonts.css", "./logo-prismae.svg"];
 

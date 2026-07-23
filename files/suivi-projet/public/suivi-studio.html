@@ -331,13 +331,13 @@
         });
     }
 
-    async function boot() {
+    function boot() {
         const token = new URLSearchParams(location.search).get("p");
         currentToken = token;
         if (!token) { showMessage("Lien invalide", "Ce lien ne contient aucun projet."); return; }
         let unlocked = false;
-        // Admin connecté (session Supabase partagée avec admin.html) → jamais de porte pour toi.
-        try { const { data } = await sb.auth.getSession(); if (data && data.session) unlocked = true; } catch (_) {}
+        // Admin actif récemment (drapeau posé par admin.html) → jamais de porte pour toi.
+        try { const until = parseInt(localStorage.getItem("sc_admin_until") || "0", 10); if (until > Date.now()) unlocked = true; } catch (_) {}
         if (!unlocked) { try { unlocked = !!localStorage.getItem(gateKey(token)); } catch (_) {} }
         if (unlocked) { loadProject(); return; }
         showGate();
@@ -381,9 +381,23 @@
 
     boot();
 
-    // Service worker (PWA installable + chargement instantané en visite répétée)
+    // Service worker : PWA installable + MISE À JOUR AUTOMATIQUE (recharge quand une
+    // nouvelle version prend le contrôle, sans réinstaller l'app).
     if ("serviceWorker" in navigator) {
-        addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+        const hadController = !!navigator.serviceWorker.controller;
+        let reloaded = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+            if (!hadController || reloaded) return;
+            reloaded = true;
+            location.reload();
+        });
+        addEventListener("load", async () => {
+            try {
+                const reg = await navigator.serviceWorker.register("/sw.js");
+                reg.update();
+                setInterval(() => reg.update(), 60 * 60 * 1000);
+            } catch (_) {}
+        });
     }
     </script>
     <!-- Vercel Web Analytics — trafic des pages, sans cookie (RGPD-friendly) -->

@@ -335,7 +335,11 @@ Livraison</textarea>
    ========================================================================= */
 const SUPABASE_URL  = "https://omqskfgodwycorwokwzo.supabase.co";
 const SUPABASE_ANON = "sb_publishable_G4VHv4hDJEHTRrdRFke_2w_r1Ngp7MQ";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// Session en sessionStorage → déconnexion automatique à la FERMETURE du navigateur
+// (elle survit à un simple rafraîchissement, mais pas à la fermeture de l'onglet/navigateur).
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true },
+});
 
 const $ = (id) => document.getElementById(id);
 
@@ -376,13 +380,43 @@ function drawQR(text) {
 // le callback onAuthStateChange provoque un INTERBLOCAGE (le bouton reste figé sur
 // « Connexion… »). On se sert de la session déjà fournie par signInWithPassword /
 // onAuthStateChange.
+// ── Déconnexion auto après 30 min d'inactivité ──────────────────────────────
+// + drapeau localStorage "sc_admin_until" (valide 30 min, rafraîchi à l'activité) :
+//   il sert à la page client pour te reconnaître et te faire SAUTER la porte email.
+const IDLE_MS = 30 * 60 * 1000;
+let idleTimer = null, lastFlagWrite = 0;
+function setAdminFlag() { try { localStorage.setItem("sc_admin_until", String(Date.now() + IDLE_MS)); } catch (_) {} }
+function clearAdminFlag() { try { localStorage.removeItem("sc_admin_until"); } catch (_) {} }
+function armIdle() {
+  if (idleTimer) clearTimeout(idleTimer);
+  idleTimer = setTimeout(async () => {
+    clearAdminFlag();
+    try { await sb.auth.signOut(); } catch (_) {}
+    applySession(null);
+    const e = $("loginError");
+    if (e) { e.textContent = "Session expirée après 30 min d'inactivité. Reconnecte-toi."; e.classList.remove("hidden"); }
+  }, IDLE_MS);
+}
+function onActivity() {
+  if ($("dashboard").classList.contains("hidden")) return;   // seulement une fois connecté
+  const now = Date.now();
+  if (now - lastFlagWrite > 60000) { setAdminFlag(); lastFlagWrite = now; }   // écrit au plus 1×/min
+  armIdle();
+}
+["click", "keydown", "mousemove", "touchstart", "scroll"].forEach((ev) =>
+  addEventListener(ev, onActivity, { passive: true }));
+
 function applySession(session) {
   if (session) {
     $("loginScreen").classList.add("hidden");
     $("loginScreen").classList.remove("flex");
     $("dashboard").classList.remove("hidden");
     loadProjects();
+    setAdminFlag();
+    armIdle();               // démarre le minuteur d'inactivité
   } else {
+    if (idleTimer) clearTimeout(idleTimer);
+    clearAdminFlag();
     $("dashboard").classList.add("hidden");
     $("loginScreen").classList.remove("hidden");
     $("loginScreen").classList.add("flex");

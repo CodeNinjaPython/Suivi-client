@@ -35,11 +35,19 @@ create table projects (
 -- Sécurité : on active RLS (rien n'est lisible par défaut)
 alter table projects enable row level security;
 
--- Toi (connecté) : accès complet
+-- Qui est admin ? Un seul email autorisé (défense en profondeur : même si un
+-- autre compte existe sur ce projet Supabase, il n'accède pas aux données).
+-- >>> REMPLACE l'email ci-dessous par celui de TON compte admin Supabase. <<<
+create or replace function is_admin()
+returns boolean language sql stable set search_path = public as $$
+  select coalesce((auth.jwt() ->> 'email') = 'fvjeremie@gmail.com', false);
+$$;
+
+-- Toi (admin) : accès complet à la table projets
 create policy "admin gère tout"
   on projects for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());
 
 -- Le client lit UNIQUEMENT via une fonction qui filtre par token
 -- et ne renvoie que les champs publics (jamais l'id ni les tokens des autres)
@@ -86,9 +94,9 @@ create table if not exists project_views (
   user_agent  text
 );
 alter table project_views enable row level security;
--- Seul l'admin (connecté) lit le journal ; le client n'y accède pas.
+-- Seul l'admin lit le journal ; le client n'y accède pas.
 create policy "admin lit les vues" on project_views for select
-  using (auth.role() = 'authenticated');
+  using (is_admin());
 
 -- Compteur + journal. Anti-abus : 1 enregistrement max / 15 s par projet.
 drop function if exists register_project_view(text);
@@ -105,3 +113,34 @@ end;
 $$;
 
 grant execute on function register_project_view to anon;
+
+-- =====================================================================
+-- Historique des étapes : une ligne à chaque changement de current_step.
+-- Alimenté automatiquement par un trigger (capte tout changement, quelle
+-- que soit la source). Lu par l'admin uniquement.
+-- =====================================================================
+create table if not exists step_history (
+  id          bigint generated always as identity primary key,
+  project_id  uuid references projects(id) on delete cascade,
+  step_index  int,
+  step_name   text,
+  changed_at  timestamptz not null default now()
+);
+alter table step_history enable row level security;
+create policy "admin lit l'historique" on step_history for select
+  using (is_admin());
+
+create or replace function log_step_change()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.current_step is distinct from old.current_step then
+    insert into step_history (project_id, step_index, step_name)
+    values (new.id, new.current_step, new.steps ->> new.current_step);
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists on_project_step_change on projects;
+create trigger on_project_step_change
+  after update on projects
+  for each row execute function log_step_change();

@@ -234,6 +234,12 @@ Livraison</textarea>
       </div>
     </div>
 
+    <!-- Historique des étapes (horodaté) -->
+    <details class="mt-4 rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
+      <summary class="cursor-pointer select-none text-sm font-semibold text-ink">Historique des étapes</summary>
+      <div id="d_stepHistory" class="mt-3 max-h-40 space-y-1 overflow-y-auto font-mono text-[11px] text-ink-soft"></div>
+    </details>
+
     <!-- Édition complète des informations du projet -->
     <details class="mt-4 rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
       <summary class="cursor-pointer select-none text-sm font-semibold text-ink">Informations du projet</summary>
@@ -675,10 +681,26 @@ async function loadViews(projectId) {
   box.innerHTML = data.map((v) => `<p>${fmtDateTime(v.viewed_at)} · ${deviceFromUA(v.user_agent)}</p>`).join("");
 }
 
+// Historique des changements d'étape (alimenté par le trigger côté base)
+function escHtml(s) { return String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+async function loadStepHistory(projectId) {
+  const box = $("d_stepHistory");
+  box.innerHTML = `<p class="text-ink-muted">Chargement…</p>`;
+  const { data, error } = await sb.from("step_history")
+    .select("step_index,step_name,changed_at").eq("project_id", projectId)
+    .order("changed_at", { ascending: false }).limit(50);
+  if (error) { box.innerHTML = `<p class="text-ink-muted">Indisponible (migration à lancer ?)</p>`; return; }
+  if (!data.length) { box.innerHTML = `<p class="text-ink-muted">Aucun changement d'étape enregistré.</p>`; return; }
+  box.innerHTML = data.map((h) =>
+    `<p>${fmtDateTime(h.changed_at)} · ${escHtml(h.step_name || ("Étape " + ((h.step_index ?? 0) + 1)))}</p>`
+  ).join("");
+}
+
 function openDetail(p) {
   current = { ...p };
   renderDetail();
   loadViews(p.id);
+  loadStepHistory(p.id);
   $("d_saveStatus").classList.add("hidden");
   detailDialog.showModal();
 }

@@ -100,15 +100,24 @@ Table `projects` :
 Table `project_views` : journal des consultations (une ligne par ouverture du lien client :
 `project_id`, `viewed_at`, `user_agent`). Lue par l'admin uniquement.
 
+Table `step_history` : historique des changements d'étape (`project_id`, `step_index`,
+`step_name`, `changed_at`), alimentée par un trigger `on_project_update`. Lue par l'admin.
+
 ### Sécurité (important)
 
 - RLS activé : rien n'est lisible par défaut.
-- **Admin** : accès complet réservé aux utilisateurs authentifiés (`auth.role() = 'authenticated'`).
+- **Admin** : accès restreint à **un seul email** via la fonction `is_admin()`
+  (`auth.jwt() ->> 'email'`). Défense en profondeur sur une instance partagée.
+  Voir `supabase/migration-securite-historique.sql` (⚠️ y mettre le bon email avant de lancer).
+- **Porte email client** : la page client (`suivi.html` / `suivi-studio.html`) **exige la
+  saisie de l'email** avant d'afficher le suivi. L'email est enregistré (notifications) puis
+  mémorisé sur l'appareil (`localStorage`). Filtre côté client + capture (le lien à token
+  donne toujours techniquement accès aux données ; blocage strict serveur = chantier séparé).
 - **Client** : ne lit JAMAIS la table directement. Il passe par des fonctions RPC
   `security definer` exposées au rôle `anon`, qui ne renvoient/écrivent que le strict
   nécessaire (jamais l'`id` ni les tokens des autres) :
   - `get_project_by_token(token)` → champs publics de son projet (+ `has_email`, sans l'exposer) ;
-  - `set_client_email(token, email)` → inscription aux alertes (anti-abus : n'écrase pas un
+  - `set_client_email(token, email)` → enregistre l'email (anti-abus : n'écrase pas un
     email existant, format validé, projet actif uniquement) ;
   - `register_project_view(token, ua)` → compteur + journal de consultation (throttle 15 s).
 
@@ -153,9 +162,9 @@ dossier `site/`, Next.js) : sombre bleu-nuit, accent bleu électrique, premium e
 ### Fait
 - [x] Schéma BDD + RLS + fonctions RPC (`schema.sql`). Token public en **hex** (URL-safe).
 - [x] Page client **branchée sur Supabase**, en **deux styles** (bleu PRISMAE / or Studio)
-      commutés par projet : timeline, note d'équipe, prochaine étape + livraison estimée,
-      bouton de livraison, squelette de chargement, **partage** (Web Share), **« poser une
-      question »** (mailto), **inscription aux alertes** par le client, écrans d'erreur.
+      commutés par projet : **porte email obligatoire** à l'entrée, timeline, note d'équipe,
+      prochaine étape + livraison estimée, bouton de livraison, squelette de chargement,
+      **partage** (Web Share), **« poser une question »** (mailto), écrans d'erreur.
 - [x] Interface admin `public/admin.html` complète : login Supabase Auth (robuste, sans
       interblocage) ; liste avec **stats**, **recherche/tri**, **archives**, badge d'inactivité ;
       création (modèles de workflow) ; détail avec édition complète, « étape suivante/précédente »
@@ -165,15 +174,19 @@ dossier `site/`, Next.js) : sombre bleu-nuit, accent bleu électrique, premium e
 - [x] **Notifications email** (Brevo) via Edge Function + Database Webhook ; email responsive,
       accent par style, bouton « avis Google » à la livraison. Voir `supabase/NOTIFICATIONS.md`.
 - [x] **Build Tailwind local** (sortie du CDN) + polices auto-hébergées. **PWA** + Open Graph.
+- [x] **PWA installable** : service worker (`public/sw.js`) — cache de la coquille, données
+      réseau (jamais périmées), navigations réseau-d'abord.
+- [x] **RLS durcie** (`is_admin()` par email) + **historique des étapes** (`step_history` +
+      trigger, affiché dans l'admin) — appliquer `supabase/migration-securite-historique.sql`.
 - [x] **Déployé** sur Vercel (`suivi-client.vercel.app`) + analytics sans cookie.
 
 ### À faire / pistes
-1. **Délivrabilité email** : l'envoi part d'un Gmail vérifié via Brevo (sans domaine) → risque
-   de spam. Vérifier un **domaine** (SPF/DKIM) pour fiabiliser (voir NOTIFICATIONS.md).
-2. (Option) **Durcir la RLS admin** : restreindre à un email précis plutôt que tout compte
-   authentifié (défense en profondeur).
-3. (Option) **Service worker** si on veut une vraie installation PWA / offline.
-4. (Option) Table `step_history` (historique complet des changements d'étape).
+1. **Appliquer la migration** `supabase/migration-securite-historique.sql` sur la base live
+   (⚠️ y renseigner le bon email admin avant, sinon tu te bloques l'accès à `admin.html`).
+2. **Délivrabilité email** : l'envoi part d'un Gmail vérifié via Brevo (sans domaine) → risque
+   de spam. Vérifier un **domaine** (SPF/DKIM) pour fiabiliser (voir NOTIFICATIONS.md §6).
+3. (Option) **Blocage strict serveur** de la page client (aujourd'hui : porte email côté
+   client + capture ; le lien à token donne toujours techniquement accès aux données).
 
 ### Infos projet Supabase
 - URL : `https://omqskfgodwycorwokwzo.supabase.co`

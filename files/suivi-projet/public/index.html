@@ -8,7 +8,7 @@
 <title>PRISMAE — Suivi de projet</title>
 <meta name="robots" content="noindex" />
 
-<!-- Aperçu de lien (Open Graph / Twitter). og:image en relatif ; à passer en URL absolue une fois le domaine fixé. -->
+<!-- Aperçu de lien (Open Graph / Twitter). URLs absolues sur suivi-client.vercel.app (à adapter si le domaine change). -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="PRISMAE" />
 <meta property="og:title" content="PRISMAE — Production vidéo &amp; photo" />
@@ -70,6 +70,12 @@
 
     <a href="admin.html" class="mt-12 text-xs uppercase tracking-[0.2em] text-ink-muted transition hover:text-accent-soft">Espace admin</a>
   </main>
+<script>
+  // Service worker (PWA installable + chargement instantané en visite répétée)
+  if ("serviceWorker" in navigator) {
+    addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+  }
+</script>
 <!-- Vercel Web Analytics — trafic des pages, sans cookie (RGPD-friendly) -->
 <script defer src="/_vercel/insights/script.js"></script>
 </body>

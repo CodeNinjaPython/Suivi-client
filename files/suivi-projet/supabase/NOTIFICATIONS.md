@@ -41,4 +41,25 @@ recevoir le mail. Avec Brevo + expéditeur vérifié, l'envoi fonctionne vers **
 email** (pas seulement le tien). Logs : Supabase → Edge Functions → notify → Logs.
 
 > Délivrabilité : sans domaine, les mails partent depuis ton Gmail vérifié via Brevo ; ils
-> peuvent parfois arriver en spam. Pour une délivrabilité optimale, vérifier un domaine plus tard.
+> peuvent parfois arriver en spam. Pour une délivrabilité optimale, vérifier un domaine (voir §6).
+
+## 6. Passer à un domaine (recommandé pour l'anti-spam)
+
+Envoyer depuis un Gmail via Brevo fonctionne, mais les mails finissent souvent en spam
+(le domaine `gmail.com` ne t'appartient pas → pas d'alignement SPF/DKIM/DMARC). Dès que tu
+as un nom de domaine (ex. `prismae.re`), authentifie-le dans Brevo :
+
+1. **Brevo → Settings → Senders, Domains & Dedicated IPs → Domains → Add a domain.**
+   Saisis ton domaine (`prismae.re`).
+2. Brevo affiche des **enregistrements DNS** (une clé **DKIM** en TXT/CNAME, un **SPF**,
+   souvent un **DMARC**). Ajoute-les chez ton **registrar** (là où le domaine est géré :
+   OVH, Gandi, Cloudflare…). Attends la propagation (quelques minutes à quelques heures).
+3. Reviens sur Brevo → **Verify / Authenticate** : les enregistrements passent au vert.
+4. **Crée un expéditeur sur ce domaine** (ex. `contact@prismae.re`) et vérifie-le.
+5. Mets à jour le **secret Supabase** `SENDER_EMAIL = contact@prismae.re`
+   (Edge Functions → Secrets), garde `SENDER_NAME = PRISMAE`. Rien d'autre à changer
+   dans le code : `notify` lit déjà `SENDER_EMAIL`.
+6. Renvoie un mail de test (avance une étape) et vérifie qu'il arrive en boîte principale.
+
+> Astuce : ajoute aussi un enregistrement **DMARC** en « p=none » au début (surveillance),
+> puis « p=quarantine » une fois que tout est vert, pour maximiser la réputation.

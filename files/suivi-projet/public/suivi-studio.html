@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="logo-prismae.svg" />
     <title>Suivi de votre projet</title>
 
-    <!-- Aperçu de lien (Open Graph / Twitter). og:image en relatif ; à passer en URL absolue une fois le domaine fixé. -->
+    <!-- Aperçu de lien (Open Graph / Twitter). URLs absolues sur suivi-client.vercel.app (à adapter si le domaine change). -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="PRISMAE" />
     <meta property="og:title" content="PRISMAE — Suivi de votre projet" />
@@ -61,6 +61,11 @@
         body.loading #skeleton { display:grid; }
         body.loading #app { display:none; }
 
+        /* Porte d'accès : email obligatoire avant d'afficher le suivi */
+        #emailGate { display:none; }
+        body.gated #emailGate { display:flex; }
+        body.gated #app, body.gated #skeleton { display:none; }
+
         @media (prefers-reduced-motion: reduce) {
             .pulse-active, .fade-in, .sk { animation: none; opacity:1; transform:none; }
         }
@@ -70,6 +75,19 @@
 </head>
 
 <body class="loading min-h-screen flex items-center justify-center p-4 sm:p-8 selection:bg-studio-gold selection:text-studio-black">
+
+    <!-- Porte d'accès : le client doit saisir son email pour voir le suivi -->
+    <section id="emailGate" class="flex-col items-center text-center max-w-xs w-full">
+        <p class="font-sans text-studio-gold text-xs uppercase tracking-[0.3em] mb-4">Accès à votre suivi</p>
+        <p class="font-serif text-3xl text-studio-cream">Entrez votre email</p>
+        <p class="mt-3 font-sans text-sm text-studio-muted">Pour accéder au suivi de votre projet et être prévenu à chaque nouvelle étape.</p>
+        <form id="gateForm" class="mt-6 w-full flex flex-col gap-3" novalidate>
+            <input id="gateEmail" type="email" required autocomplete="email" inputmode="email" placeholder="votre@email.com"
+                class="bg-studio-black border border-studio-border rounded-lg px-4 py-3 font-sans text-sm text-studio-cream placeholder:text-studio-muted focus:border-studio-gold focus:outline-none" />
+            <button type="submit" class="bg-studio-gold text-studio-black font-sans text-xs uppercase tracking-widest font-bold rounded-lg px-5 py-3 transition hover:brightness-105">Accéder au suivi</button>
+            <p id="gateError" class="hidden font-sans text-sm text-red-400">Adresse email invalide.</p>
+        </form>
+    </section>
 
     <!-- Squelette de chargement -->
     <div id="skeleton" class="max-w-5xl w-full grid-cols-1 lg:grid-cols-12 gap-8" aria-hidden="true">
@@ -126,18 +144,6 @@
                 </span>
                 <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             </a>
-
-            <!-- Opt-in alertes (si aucun email enregistré) -->
-            <div id="alertBlock" class="hidden bg-studio-charcoal border border-studio-border p-5 rounded-lg">
-                <p class="font-serif text-lg text-studio-cream">Soyez alerté de l'avancement</p>
-                <p class="mt-1 font-sans text-xs text-studio-muted">Recevez un email à chaque nouvelle étape de votre projet.</p>
-                <form id="alertForm" class="mt-3 flex flex-col gap-2 sm:flex-row">
-                    <input id="alertEmail" type="email" required placeholder="votre@email.com"
-                        class="min-w-0 flex-1 bg-studio-black border border-studio-border rounded-lg px-3 py-2 font-sans text-sm text-studio-cream placeholder:text-studio-muted focus:border-studio-gold focus:outline-none" />
-                    <button type="submit" class="bg-studio-gold text-studio-black font-sans text-xs uppercase tracking-widest font-bold rounded-lg px-4 py-2 transition hover:brightness-105">M'alerter</button>
-                </form>
-                <p id="alertDone" class="mt-3 hidden font-sans text-sm text-studio-gold">Parfait, vous serez alerté à chaque étape.</p>
-            </div>
 
             <!-- Partage + question -->
             <div class="flex flex-wrap gap-2">
@@ -241,10 +247,6 @@
             a.classList.remove("hidden");
             a.classList.add("flex");
         }
-        // Pas encore d'email → proposer l'inscription aux alertes
-        if (!p.has_email && !p.delivered) {
-            document.getElementById("alertBlock").classList.remove("hidden");
-        }
 
         // Timeline
         const container = document.getElementById("timeline-container");
@@ -300,17 +302,44 @@
         registerView(token);
     }
 
-    // Inscription du client aux alertes : enregistre son email via la RPC.
-    document.getElementById("alertForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const email = document.getElementById("alertEmail").value.trim();
+    /* Porte d'accès — email obligatoire avant d'afficher le suivi (même logique
+       que suivi.html). L'email est enregistré puis mémorisé sur l'appareil. */
+    const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+    const gateKey = (t) => "suivi_email_" + t;
+    let currentToken = null;
+
+    function showGate() {
+        document.body.classList.remove("loading");
+        document.body.classList.add("gated");
+        const input = document.getElementById("gateEmail");
+        if (input) input.focus();
+    }
+
+    const gateForm = document.getElementById("gateForm");
+    if (gateForm) {
+        gateForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const email = document.getElementById("gateEmail").value.trim().toLowerCase();
+            const err = document.getElementById("gateError");
+            if (!EMAIL_RE.test(email)) { err.classList.remove("hidden"); return; }
+            err.classList.add("hidden");
+            try { await sb.rpc("set_client_email", { token: currentToken, email }); } catch (_) {}
+            try { localStorage.setItem(gateKey(currentToken), email); } catch (_) {}
+            document.body.classList.remove("gated");
+            document.body.classList.add("loading");
+            loadProject();
+        });
+    }
+
+    function boot() {
         const token = new URLSearchParams(location.search).get("p");
-        if (!email || !token) return;
-        const { error } = await sb.rpc("set_client_email", { token, email });
-        if (error) { console.error(error); return; }
-        document.getElementById("alertForm").classList.add("hidden");
-        document.getElementById("alertDone").classList.remove("hidden");
-    });
+        currentToken = token;
+        if (!token) { showMessage("Lien invalide", "Ce lien ne contient aucun projet."); return; }
+        let unlocked = false;
+        try { unlocked = !!localStorage.getItem(gateKey(token)); } catch (_) {}
+        if (unlocked) { loadProject(); return; }
+        showGate();
+    }
 
     // Comptabilise une consultation (une fois par session navigateur, fire-and-forget)
     function registerView(token) {
@@ -348,7 +377,12 @@
         try { await navigator.clipboard.writeText(url); label.textContent = "Lien copié"; setTimeout(() => label.textContent = "Partager le suivi", 1800); } catch (_) {}
     });
 
-    loadProject();
+    boot();
+
+    // Service worker (PWA installable + chargement instantané en visite répétée)
+    if ("serviceWorker" in navigator) {
+        addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+    }
     </script>
     <!-- Vercel Web Analytics — trafic des pages, sans cookie (RGPD-friendly) -->
     <script defer src="/_vercel/insights/script.js"></script>

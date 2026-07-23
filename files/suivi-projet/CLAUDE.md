@@ -29,23 +29,41 @@ documentaire et commercial puissent avoir des workflows différents sans toucher
 ## Stack
 
 - **Front** : HTML + Tailwind CSS + JavaScript vanilla (pas de framework).
-  - En preview, Tailwind est chargé via le Play CDN. **En production, passer au build
-    Tailwind** (CLI ou PostCSS) pour la performance.
+  - Tailwind est **buildé en local** (plus de Play CDN) : `npm run build:css` génère
+    `public/styles.css` (bleu PRISMAE) et `public/styles-studio.css` (or Studio) à partir
+    de `src/input.css` et des deux configs `tailwind.config.cjs` / `tailwind.studio.config.cjs`.
+    Polices **auto-hébergées** (`public/fonts/` + `public/fonts.css`).
 - **Back / BDD** : **Supabase** (Postgres + Auth + RLS). Choisi plutôt que Firebase
   car les données sont relationnelles et la sécurité par token est plus simple en SQL.
-- **Hébergement** : Vercel ou Netlify (site statique servi depuis `public/`).
-- **QR code** : à générer (lib JS type `qrcode`, ou service) côté interface admin.
+- **Notifications** : **Edge Function** `supabase/functions/notify` (Deno), déclenchée par un
+  Database Webhook sur `UPDATE projects`, envoi email via **Brevo** (sans domaine, expéditeur
+  vérifié). Voir `supabase/NOTIFICATIONS.md`.
+- **Hébergement** : **Vercel** (site statique servi depuis `public/`) — live sur
+  `https://suivi-client.vercel.app`. Analytics Vercel (sans cookie) sur les pages client.
+- **QR code** : généré côté admin (lib `qrcode-generator`, dessiné sur canvas → PNG).
 
 ## Arborescence
 
 ```
 suivi-projet/
-├─ CLAUDE.md          ← ce fichier (contexte projet)
-├─ README.md          ← démarrage rapide
-├─ schema.sql         ← schéma BDD + politiques RLS + fonction RPC (à coller dans Supabase)
-└─ public/
-   ├─ suivi.html      ← page CLIENT (FAITE — branchement Supabase à activer)
-   └─ admin.html      ← interface ADMIN (À CRÉER)
+├─ CLAUDE.md              ← ce fichier (contexte projet)
+├─ README.md              ← démarrage rapide
+├─ schema.sql             ← schéma BDD + RLS + fonctions RPC (à coller dans Supabase)
+├─ package.json           ← build Tailwind (npm run build:css)
+├─ tailwind.config.cjs    ← config Tailwind (bleu PRISMAE)
+├─ tailwind.studio.config.cjs ← config Tailwind (or Studio)
+├─ src/input.css          ← entrée du build Tailwind
+├─ supabase/
+│  ├─ NOTIFICATIONS.md     ← mise en place des emails (Brevo)
+│  └─ functions/notify/index.ts ← Edge Function d'envoi email
+└─ public/                ← racine servie par Vercel
+   ├─ index.html          ← page d'accueil PRISMAE
+   ├─ suivi.html          ← page CLIENT (bleu PRISMAE) — branchée Supabase
+   ├─ suivi-studio.html   ← page CLIENT (or Studio) — variante commutée par projet
+   ├─ admin.html          ← interface ADMIN complète (auth, CRUD, QR, export CSV)
+   ├─ styles.css / styles-studio.css / fonts.css  ← CSS buildés + polices
+   ├─ fonts/              ← polices .woff2 auto-hébergées
+   └─ manifest.webmanifest, icônes, og-image, logo  ← PWA + Open Graph
 ```
 
 ---
@@ -61,6 +79,7 @@ Table `projects` :
 | studio_name      | text        | « Jérémie & Jeannette » (mariage) ou « PRISMAE » (com.) |
 | studio_tagline   | text        | ex. « Immortels Souvenirs »                             |
 | client_name      | text        | ex. « Sophie & Marc »                                   |
+| client_email     | text        | email du client (pour les notifications, optionnel)     |
 | project_title    | text        | ex. « Votre film de mariage »                           |
 | project_type     | text        | ex. « Film de mariage », « Documentaire »               |
 | event_date       | date        | date de l'événement / tournage                          |
@@ -70,16 +89,28 @@ Table `projects` :
 | client_note      | text        | mot de l'équipe (optionnel)                             |
 | delivered        | boolean     | projet livré ?                                          |
 | delivery_url     | text        | lien de livraison (Drive, WeTransfer…)                  |
+| estimated_delivery | date      | date de livraison estimée (visible client, optionnel)   |
+| style            | text        | `prismae` (bleu) ou `studio` (or) → choisit la page     |
+| archived         | boolean     | projet archivé (masqué de la liste active)              |
+| view_count       | int         | nb de consultations du lien client                      |
+| last_viewed_at   | timestamptz | dernière consultation du lien                           |
 | created_at       | timestamptz |                                                         |
 | updated_at       | timestamptz |                                                         |
+
+Table `project_views` : journal des consultations (une ligne par ouverture du lien client :
+`project_id`, `viewed_at`, `user_agent`). Lue par l'admin uniquement.
 
 ### Sécurité (important)
 
 - RLS activé : rien n'est lisible par défaut.
 - **Admin** : accès complet réservé aux utilisateurs authentifiés (`auth.role() = 'authenticated'`).
-- **Client** : ne lit JAMAIS la table directement. Il appelle la fonction RPC
-  `get_project_by_token(token)` qui renvoie **uniquement son projet** et **seulement les
-  champs publics** (jamais l'`id` ni les tokens des autres projets). Exposée au rôle `anon`.
+- **Client** : ne lit JAMAIS la table directement. Il passe par des fonctions RPC
+  `security definer` exposées au rôle `anon`, qui ne renvoient/écrivent que le strict
+  nécessaire (jamais l'`id` ni les tokens des autres) :
+  - `get_project_by_token(token)` → champs publics de son projet (+ `has_email`, sans l'exposer) ;
+  - `set_client_email(token, email)` → inscription aux alertes (anti-abus : n'écrase pas un
+    email existant, format validé, projet actif uniquement) ;
+  - `register_project_view(token, ua)` → compteur + journal de consultation (throttle 15 s).
 
 ---
 
@@ -108,31 +139,41 @@ dossier `site/`, Next.js) : sombre bleu-nuit, accent bleu électrique, premium e
   tête de lecture lumineuse pulsée sur l'étape en cours).
 
 **Direction**
-- **Mobile-first** (le client arrive par QR code sur son téléphone).
+- **Mobile-first** (le client arrive par QR code sur son téléphone). Desktop : page client
+  sur 2 colonnes (ordre mobile préservé via `display:contents`).
 - Élément signature de la page client : la timeline traitée comme une **table de
-  montage** — rail vertical qui se remplit d'or jusqu'à l'étape atteinte, tête de
-  lecture lumineuse et pulsée sur l'étape en cours.
-- Animations sobres, `prefers-reduced-motion` respecté, focus clavier visible.
+  montage** — rail vertical qui se remplit (bleu en style PRISMAE, or en style Studio)
+  jusqu'à l'étape atteinte, tête de lecture lumineuse et pulsée sur l'étape en cours.
+- Animations sobres, squelette de chargement, `prefers-reduced-motion` respecté, focus clavier visible.
 
 ---
 
 ## État du projet
 
 ### Fait
-- [x] Schéma BDD + RLS + fonction RPC (`schema.sql`). Tokens passés en **hex** (URL-safe).
-- [x] Page client `public/suivi.html` **branchée sur Supabase** (RPC `get_project_by_token`,
-      clé anon/publishable, écrans d'erreur). Connexion vérifiée.
-- [x] Interface admin `public/admin.html` : login Supabase Auth ; liste des projets ;
-      création (génère le `public_token`) ; détail avec « étape suivante/précédente »
-      (met à jour `current_step` + horodate `step_dates`) ; note client ; bascule
-      `delivered` + `delivery_url` ; **lien client + QR code** (copie + téléchargement PNG) ;
-      suppression. Le lien client est calculé relativement à l'emplacement de `admin.html`.
+- [x] Schéma BDD + RLS + fonctions RPC (`schema.sql`). Token public en **hex** (URL-safe).
+- [x] Page client **branchée sur Supabase**, en **deux styles** (bleu PRISMAE / or Studio)
+      commutés par projet : timeline, note d'équipe, prochaine étape + livraison estimée,
+      bouton de livraison, squelette de chargement, **partage** (Web Share), **« poser une
+      question »** (mailto), **inscription aux alertes** par le client, écrans d'erreur.
+- [x] Interface admin `public/admin.html` complète : login Supabase Auth (robuste, sans
+      interblocage) ; liste avec **stats**, **recherche/tri**, **archives**, badge d'inactivité ;
+      création (modèles de workflow) ; détail avec édition complète, « étape suivante/précédente »
+      horodatée, note, livraison estimée, `delivered` + `delivery_url`, style ; **archivage**,
+      **duplication**, **suppression** ; **lien + QR code** (copie + PNG) ; **export CSV** ;
+      **journal des consultations** par client.
+- [x] **Notifications email** (Brevo) via Edge Function + Database Webhook ; email responsive,
+      accent par style, bouton « avis Google » à la livraison. Voir `supabase/NOTIFICATIONS.md`.
+- [x] **Build Tailwind local** (sortie du CDN) + polices auto-hébergées. **PWA** + Open Graph.
+- [x] **Déployé** sur Vercel (`suivi-client.vercel.app`) + analytics sans cookie.
 
-### À faire (par ordre suggéré)
-1. **Créer l'utilisateur admin** dans Supabase (Authentication → Users → Add user) pour
-   pouvoir se connecter à `admin.html`.
-2. **Déploiement** Vercel/Netlify + passage au **build Tailwind** (sortir du CDN).
-3. (Option) Table `step_history` ou notifications email à la livraison.
+### À faire / pistes
+1. **Délivrabilité email** : l'envoi part d'un Gmail vérifié via Brevo (sans domaine) → risque
+   de spam. Vérifier un **domaine** (SPF/DKIM) pour fiabiliser (voir NOTIFICATIONS.md).
+2. (Option) **Durcir la RLS admin** : restreindre à un email précis plutôt que tout compte
+   authentifié (défense en profondeur).
+3. (Option) **Service worker** si on veut une vraie installation PWA / offline.
+4. (Option) Table `step_history` (historique complet des changements d'étape).
 
 ### Infos projet Supabase
 - URL : `https://omqskfgodwycorwokwzo.supabase.co`

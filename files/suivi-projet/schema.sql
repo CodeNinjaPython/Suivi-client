@@ -6,7 +6,9 @@
 -- Table des projets
 create table projects (
   id            uuid primary key default gen_random_uuid(),
-  public_token  text unique not null default encode(gen_random_bytes(9), 'base64'),
+  -- Token du lien client : encodage HEX (0-9 a-f) => 100% URL-safe.
+  -- (base64 produirait des / + = qui cassent l'URL ?p=... . La base live est déjà en hex.)
+  public_token  text unique not null default encode(gen_random_bytes(9), 'hex'),
   studio_name   text not null default 'Jérémie & Jeannette',
   studio_tagline text default 'Immortels Souvenirs',
   client_name   text not null,

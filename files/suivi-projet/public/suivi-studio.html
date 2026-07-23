@@ -331,12 +331,14 @@
         });
     }
 
-    function boot() {
+    async function boot() {
         const token = new URLSearchParams(location.search).get("p");
         currentToken = token;
         if (!token) { showMessage("Lien invalide", "Ce lien ne contient aucun projet."); return; }
         let unlocked = false;
-        try { unlocked = !!localStorage.getItem(gateKey(token)); } catch (_) {}
+        // Admin connecté (session Supabase partagée avec admin.html) → jamais de porte pour toi.
+        try { const { data } = await sb.auth.getSession(); if (data && data.session) unlocked = true; } catch (_) {}
+        if (!unlocked) { try { unlocked = !!localStorage.getItem(gateKey(token)); } catch (_) {} }
         if (unlocked) { loadProject(); return; }
         showGate();
     }

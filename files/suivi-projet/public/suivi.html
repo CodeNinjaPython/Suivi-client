@@ -483,8 +483,8 @@ if (gateForm) {
   });
 }
 
-// Démarrage : si l'email a déjà été saisi sur cet appareil, on charge directement ; sinon, porte.
-function boot() {
+// Démarrage : admin connecté ou email déjà saisi → on charge directement ; sinon, porte.
+async function boot() {
   const token = new URLSearchParams(location.search).get("p");
   currentToken = token;
   if (!token) {
@@ -492,7 +492,10 @@ function boot() {
     return;
   }
   let unlocked = false;
-  try { unlocked = !!localStorage.getItem(gateKey(token)); } catch (_) {}
+  // Admin connecté (session Supabase partagée avec admin.html) → jamais de porte pour toi.
+  try { const { data } = await sb.auth.getSession(); if (data && data.session) unlocked = true; } catch (_) {}
+  // Sinon : email déjà saisi sur cet appareil ?
+  if (!unlocked) { try { unlocked = !!localStorage.getItem(gateKey(token)); } catch (_) {} }
   if (unlocked) { loadProject(); return; }
   showGate();
 }

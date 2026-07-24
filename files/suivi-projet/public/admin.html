@@ -177,6 +177,7 @@
         <select name="style" class="field">
           <option value="prismae">Bleu — PRISMAE</option>
           <option value="studio">Or — Studio (cinéma)</option>
+          <option value="mariage">Ivoire — Mariage</option>
         </select>
       </div>
       <div class="sm:col-span-2">
@@ -264,6 +265,7 @@ Livraison</textarea>
       <select id="d_style" class="field" aria-label="Style de la page client">
         <option value="prismae">Bleu — PRISMAE</option>
         <option value="studio">Or — Studio (cinéma)</option>
+        <option value="mariage">Ivoire — Mariage</option>
       </select>
     </div>
 
@@ -542,7 +544,7 @@ function renderList() {
         <div>
           <p class="font-display text-xl font-bold text-ink">${p.project_title}</p>
           <p class="mt-0.5 font-mono text-xs text-ink-muted">
-            ${p.client_name}${p.project_type ? " · " + p.project_type : ""}${p.event_date ? " · " + fmtDate(p.event_date) : ""} · ${p.style === "studio" ? "Or" : "Bleu"}${p.archived ? " · Archivé" : ""}${staleBadge}
+            ${p.client_name}${p.project_type ? " · " + p.project_type : ""}${p.event_date ? " · " + fmtDate(p.event_date) : ""} · ${p.style === "studio" ? "Or" : p.style === "mariage" ? "Mariage" : "Bleu"}${p.archived ? " · Archivé" : ""}${staleBadge}
           </p>
         </div>
         <span class="shrink-0 rounded-full border ${p.delivered ? 'border-accent text-accent' : 'border-[rgba(244,241,236,0.12)] text-accent-soft'} px-3 py-1 font-mono text-[10px] uppercase tracking-widest">

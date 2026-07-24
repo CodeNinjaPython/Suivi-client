@@ -48,13 +48,16 @@ Deno.serve(async (req) => {
   const cur = Math.min(p.current_step ?? 0, Math.max(total - 1, 0));
   const stepName = esc(steps[cur] || "");
 
-  // Couleur d'accent selon le style du projet (or pour "studio", bleu sinon)
+  // Couleur d'accent selon le style du projet (or "studio", or chaud "mariage", bleu sinon)
   const isStudio = p.style === "studio";
-  const accent = isStudio ? "#c9a24a" : "#3b9bff";
-  const btnText = isStudio ? "#1a1407" : "#ffffff";
+  const isMariage = p.style === "mariage";
+  const accent = isStudio ? "#c9a24a" : isMariage ? "#b88b36" : "#3b9bff";
+  const btnText = (isStudio || isMariage) ? "#1a1407" : "#ffffff";
 
   // Lien d'avis Google (optionnel) : par marque (style) avec repli sur REVIEW_URL
-  const reviewUrl = (isStudio ? Deno.env.get("REVIEW_URL_STUDIO") : Deno.env.get("REVIEW_URL_PRISMAE"))
+  const reviewUrl = (isStudio ? Deno.env.get("REVIEW_URL_STUDIO")
+      : isMariage ? Deno.env.get("REVIEW_URL_MARIAGE")
+      : Deno.env.get("REVIEW_URL_PRISMAE"))
     || Deno.env.get("REVIEW_URL") || "";
 
   const subject = justDelivered

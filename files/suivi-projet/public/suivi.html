@@ -444,9 +444,10 @@ async function loadProject() {
     showMessage("Projet introuvable", "Ce projet n'existe pas ou n'est plus disponible.");
     return;
   }
-  // Bascule de style par projet : si le projet est en style "studio" (or), on
-  // sert la variante dorée. Sinon (prismae / non défini), on rend le bleu ici.
-  if (data.style === "studio") { location.replace("suivi-studio.html" + location.search); return; }
+  // Bascule de style par projet : on sert la variante dédiée selon le style.
+  // Sinon (prismae / non défini), on rend le bleu ici.
+  if (data.style === "studio")  { location.replace("suivi-studio.html"  + location.search); return; }
+  if (data.style === "mariage") { location.replace("suivi-mariage.html" + location.search); return; }
   render(data);
   registerView(token);
 }

@@ -28,6 +28,7 @@ files/suivi-projet/
    ├─ index.html          ← page d'accueil
    ├─ suivi.html          ← page CLIENT bleue (PRISMAE)
    ├─ suivi-studio.html   ← page CLIENT or (Studio)
+   ├─ suivi-mariage.html  ← page CLIENT ivoire/or (Mariage)
    ├─ admin.html          ← console admin (auth, CRUD, QR, export, historique)
    ├─ sw.js               ← service worker PWA (bump VERSION si assets changent)
    └─ styles.css / styles-studio.css / fonts.css / fonts/ / icônes / manifest
@@ -38,6 +39,7 @@ files/suivi-projet/
 |---|---|
 | Page client (bleu) : contenu/porte email/logique | `public/suivi.html` |
 | Page client (or) : idem style Studio | `public/suivi-studio.html` |
+| Page client (ivoire/or) : style Mariage | `public/suivi-mariage.html` (+ `fonts-mariage.css`, `tailwind.mariage.config.cjs`) |
 | Console admin : liste, fiche, création, historique | `public/admin.html` |
 | BDD (tables, RLS, RPC, triggers) | `schema.sql` (+ écrire une migration dans `supabase/`) |
 | Emails (contenu, expéditeur, avis Google) | `supabase/functions/notify/index.ts` + `NOTIFICATIONS.md` |
@@ -56,8 +58,10 @@ files/suivi-projet/
     porte pour l'admin sur les liens client.
 - **Admin** : session en `sessionStorage` (déconnexion à la fermeture) + auto-logout
   30 min d'inactivité. Login Supabase Auth (email/mot de passe).
-- **Deux styles** commutés par projet (`style` = `prismae` | `studio`) : `suivi.html`
-  redirige vers `suivi-studio.html` si `style = studio`.
+- **Trois styles** commutés par projet (`style` = `prismae` | `studio` | `mariage`) :
+  `suivi.html` est la porte d'entrée et redirige vers `suivi-studio.html` si `style = studio`,
+  vers `suivi-mariage.html` si `style = mariage`. Le style Mariage reprend la charte du
+  site de mariage (fond ivoire, or, polices Pretty Dahlia / Copperplate Gothic / LEMON MILK).
 
 ## Migration en attente
 `supabase/migration-securite-historique.sql` doit être exécutée sur la base live

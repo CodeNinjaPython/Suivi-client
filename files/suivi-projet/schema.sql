@@ -24,7 +24,7 @@ create table projects (
   delivered     boolean not null default false,
   delivery_url  text,
   estimated_delivery date,                -- date de livraison estimée (optionnelle)
-  style         text not null default 'prismae',  -- 'prismae' (bleu) ou 'studio' (or)
+  style         text not null default 'prismae',  -- 'prismae' (bleu), 'studio' (or) ou 'mariage' (ivoire/or)
   archived      boolean not null default false,    -- projet archivé (masqué de la liste active)
   view_count    int not null default 0,            -- nb de consultations du lien client
   last_viewed_at timestamptz,                       -- dernière consultation

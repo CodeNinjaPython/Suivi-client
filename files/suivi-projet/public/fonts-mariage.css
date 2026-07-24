@@ -1,0 +1,57 @@
+/* =========================================================================
+   Polices du thème "Mariage" — reprises du site de mariage de Jérémie.
+   Fichiers déjà versionnés dans public/assets/fonts/ (.woff2).
+     - Pretty Dahlia    → script (noms des mariés, ornements)
+     - Copperplate Gothic → display gravé (titres, kickers)  Light 300 / Bold 700
+     - LEMON MILK        → labels courts / valeurs          Light 300 → Bold 700
+     - FcoFlares         → ornements
+   Le corps de texte long reste en system-ui (comme sur le site source).
+   ========================================================================= */
+
+/* Script — noms des mariés, accents romantiques */
+@font-face {
+  font-family: 'Pretty Dahlia';
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url('assets/fonts/Pretty Dahlia.woff2') format('woff2');
+}
+
+/* Display gravé — Copperplate Gothic (Light + Bold) */
+@font-face {
+  font-family: 'Copperplate Gothic';
+  font-style: normal; font-weight: 300; font-display: swap;
+  src: url('assets/fonts/COPRGTL.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Copperplate Gothic';
+  font-style: normal; font-weight: 700; font-display: swap;
+  src: url('assets/fonts/COPRGTB.woff2') format('woff2');
+}
+
+/* Sans display — LEMON MILK (labels, valeurs, boutons) */
+@font-face {
+  font-family: 'LEMON MILK';
+  font-style: normal; font-weight: 300; font-display: swap;
+  src: url('assets/fonts/LEMONMILK-Light.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'LEMON MILK';
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url('assets/fonts/LEMONMILK-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'LEMON MILK';
+  font-style: normal; font-weight: 500; font-display: swap;
+  src: url('assets/fonts/LEMONMILK-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'LEMON MILK';
+  font-style: normal; font-weight: 700; font-display: swap;
+  src: url('assets/fonts/LEMONMILK-Bold.woff2') format('woff2');
+}
+
+/* Ornements — FcoFlares */
+@font-face {
+  font-family: 'FcoFlares';
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url('assets/fonts/FcoFlares.woff2') format('woff2');
+}

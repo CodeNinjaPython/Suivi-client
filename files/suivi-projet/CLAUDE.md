@@ -30,9 +30,11 @@ documentaire et commercial puissent avoir des workflows différents sans toucher
 
 - **Front** : HTML + Tailwind CSS + JavaScript vanilla (pas de framework).
   - Tailwind est **buildé en local** (plus de Play CDN) : `npm run build:css` génère
-    `public/styles.css` (bleu PRISMAE) et `public/styles-studio.css` (or Studio) à partir
-    de `src/input.css` et des deux configs `tailwind.config.cjs` / `tailwind.studio.config.cjs`.
-    Polices **auto-hébergées** (`public/fonts/` + `public/fonts.css`).
+    `public/styles.css` (bleu PRISMAE), `public/styles-studio.css` (or Studio) et
+    `public/styles-mariage.css` (ivoire Mariage) à partir de `src/input.css` et des trois
+    configs `tailwind.config.cjs` / `tailwind.studio.config.cjs` / `tailwind.mariage.config.cjs`.
+    Polices **auto-hébergées** (`public/fonts/` + `public/fonts.css` ; polices Mariage dans
+    `public/assets/fonts/` + `public/fonts-mariage.css`).
 - **Back / BDD** : **Supabase** (Postgres + Auth + RLS). Choisi plutôt que Firebase
   car les données sont relationnelles et la sécurité par token est plus simple en SQL.
 - **Notifications** : **Edge Function** `supabase/functions/notify` (Deno), déclenchée par un
@@ -52,6 +54,7 @@ suivi-projet/
 ├─ package.json           ← build Tailwind (npm run build:css)
 ├─ tailwind.config.cjs    ← config Tailwind (bleu PRISMAE)
 ├─ tailwind.studio.config.cjs ← config Tailwind (or Studio)
+├─ tailwind.mariage.config.cjs ← config Tailwind (ivoire Mariage)
 ├─ src/input.css          ← entrée du build Tailwind
 ├─ supabase/
 │  ├─ NOTIFICATIONS.md     ← mise en place des emails (Brevo)
@@ -60,6 +63,7 @@ suivi-projet/
    ├─ index.html          ← page d'accueil PRISMAE
    ├─ suivi.html          ← page CLIENT (bleu PRISMAE) — branchée Supabase
    ├─ suivi-studio.html   ← page CLIENT (or Studio) — variante commutée par projet
+   ├─ suivi-mariage.html  ← page CLIENT (ivoire Mariage) — charte du site de mariage
    ├─ admin.html          ← interface ADMIN complète (auth, CRUD, QR, export CSV)
    ├─ styles.css / styles-studio.css / fonts.css  ← CSS buildés + polices
    ├─ fonts/              ← polices .woff2 auto-hébergées
@@ -90,7 +94,7 @@ Table `projects` :
 | delivered        | boolean     | projet livré ?                                          |
 | delivery_url     | text        | lien de livraison (Drive, WeTransfer…)                  |
 | estimated_delivery | date      | date de livraison estimée (visible client, optionnel)   |
-| style            | text        | `prismae` (bleu) ou `studio` (or) → choisit la page     |
+| style            | text        | `prismae` (bleu), `studio` (or) ou `mariage` (ivoire) → choisit la page |
 | archived         | boolean     | projet archivé (masqué de la liste active)              |
 | view_count       | int         | nb de consultations du lien client                      |
 | last_viewed_at   | timestamptz | dernière consultation du lien                           |
@@ -161,7 +165,7 @@ dossier `site/`, Next.js) : sombre bleu-nuit, accent bleu électrique, premium e
 
 ### Fait
 - [x] Schéma BDD + RLS + fonctions RPC (`schema.sql`). Token public en **hex** (URL-safe).
-- [x] Page client **branchée sur Supabase**, en **deux styles** (bleu PRISMAE / or Studio)
+- [x] Page client **branchée sur Supabase**, en **trois styles** (bleu PRISMAE / or Studio / ivoire Mariage)
       commutés par projet : **porte email obligatoire** à l'entrée, timeline, note d'équipe,
       prochaine étape + livraison estimée, bouton de livraison, squelette de chargement,
       **partage** (Web Share), **« poser une question »** (mailto), écrans d'erreur.

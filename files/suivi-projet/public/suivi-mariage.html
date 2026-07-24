@@ -201,19 +201,21 @@
         }
         .eyebrow .flare { font-size: 13px; }
 
-        .project-title {
-            margin: 14px 0 0;
-            font-family: var(--display);
-            font-size: clamp(28px, 4.4vw, 46px);
-            font-weight: 700; line-height: 1.04;
-            letter-spacing: .04em; text-transform: uppercase;
-            color: var(--ink);
-        }
+        /* Foyer émotionnel : les prénoms des mariés (script), plus grand que tout */
         .couple {
-            margin: 6px 0 0;
+            margin: 4px 0 0;
             font-family: var(--script);
-            font-size: clamp(34px, 5.4vw, 52px);
-            line-height: 1; padding-bottom: .06em;
+            font-size: clamp(46px, 8vw, 72px);
+            line-height: .95; padding-bottom: .06em;
+        }
+        /* Titre du projet : rôle secondaire, sous-titre gravé discret */
+        .project-title {
+            margin: 10px 0 0;
+            font-family: var(--display);
+            font-size: clamp(13px, 1.5vw, 16px);
+            font-weight: 700; line-height: 1.3;
+            letter-spacing: .18em; text-transform: uppercase;
+            color: var(--ink-soft);
         }
         .lede {
             margin: 16px 0 0;
@@ -232,9 +234,8 @@
             padding: 16px 18px;
             border: 1px solid var(--line);
             border-radius: 16px;
-            background: var(--glass);
-            box-shadow: 0 14px 40px rgba(63, 42, 16, .06);
-            backdrop-filter: blur(8px);
+            background: var(--paper-soft);
+            box-shadow: var(--card-shadow), inset 0 1px 0 rgba(255, 255, 255, .7);
         }
         .meta-card .label {
             display: block; margin-bottom: 6px;
@@ -306,7 +307,7 @@
             min-height: 42px; padding: 0 18px;
             border: 1px solid var(--line-strong);
             border-radius: 999px;
-            background: rgba(255, 255, 255, .55);
+            background: var(--paper-soft);
             color: var(--ink-soft);
             font-family: var(--sans);
             font-size: 10px; font-weight: 500;
@@ -320,7 +321,7 @@
             padding: 18px 20px;
             border: 1px solid var(--line);
             border-radius: 16px;
-            background: var(--glass);
+            background: var(--paper-soft);
             box-shadow: var(--card-shadow);
             font-size: 14px;
         }
@@ -333,11 +334,10 @@
             position: relative;
             overflow: hidden;
             padding: clamp(26px, 3.4vw, 44px);
-            border: 1px solid rgba(255, 255, 255, .6);
+            border: 1px solid var(--line);
             border-radius: 24px;
-            background: var(--glass);
-            box-shadow: var(--card-shadow);
-            backdrop-filter: blur(10px);
+            background: var(--paper-soft);
+            box-shadow: var(--card-shadow), inset 0 1px 0 rgba(255, 255, 255, .7);
         }
         .panel-rings {
             position: absolute; top: 22px; right: 24px;
@@ -392,8 +392,8 @@
             background: var(--gold-grad);
             box-shadow: 0 6px 16px rgba(123, 86, 24, .3);
         }
-        .tl-dot svg { width: 13px; height: 13px; color: #fff; }
-        .tl-dot .core { width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+        .tl-dot .tl-ico { width: 14px; height: 14px; color: var(--muted); }
+        .tl-dot.is-done .tl-ico, .tl-dot.is-active .tl-ico { color: #fff; }
         .tl-state {
             display: block; margin-bottom: 4px;
             font-family: var(--sans);
@@ -403,10 +403,10 @@
         .tl-item.is-active .tl-state { color: var(--gold-deep); }
         .tl-title {
             margin: 0;
-            font-family: var(--display);
-            font-size: clamp(15px, 1.7vw, 18px);
-            font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-            line-height: 1.25; color: var(--muted);
+            font-family: var(--read);
+            font-size: clamp(16px, 1.8vw, 19px);
+            font-weight: 600; letter-spacing: .01em; text-transform: none;
+            line-height: 1.3; color: var(--muted);
         }
         .tl-item.is-done .tl-title, .tl-item.is-active .tl-title { color: var(--ink); }
         .tl-date { margin: 5px 0 0; font-family: var(--sans); font-size: 11px; letter-spacing: .04em; color: var(--muted); }
@@ -418,11 +418,10 @@
             flex-direction: column; align-items: center; text-align: center;
             width: 100%; max-width: 400px; margin: auto;
             padding: clamp(30px, 5vw, 46px) clamp(24px, 4vw, 38px);
-            border: 1px solid rgba(255, 255, 255, .6);
+            border: 1px solid var(--line);
             border-radius: 24px;
-            background: var(--glass);
+            background: var(--paper-soft);
             box-shadow: var(--shadow);
-            backdrop-filter: blur(10px);
         }
         #emailGate::before {
             content: ''; display: block;
@@ -559,9 +558,9 @@
             <!-- Colonne gauche : infos projet -->
             <div class="info">
                 <div>
-                    <p class="eyebrow"><span class="flare" aria-hidden="true">&#10022;</span>Votre film de mariage</p>
-                    <h1 id="projectTitle" class="project-title">—</h1>
+                    <p class="eyebrow"><span class="flare" aria-hidden="true">&#10022;</span>Suivi de votre film</p>
                     <p id="coupleName" class="couple gold-text hidden"></p>
+                    <h1 id="projectTitle" class="project-title">—</h1>
                     <p class="lede">
                         Suivez l'avancement de votre film en temps réel. Chaque étape est mise à jour
                         par notre équipe à mesure qu'elle est validée.
@@ -652,6 +651,28 @@
         </div>`;
     }
 
+    // Icône line-art par étape, choisie d'après des mots-clés du libellé (repli : losange).
+    // Robuste aux workflows personnalisés (on cherche des racines de mots).
+    function stepIcon(label) {
+        const s = (label || "").toLowerCase();
+        const I = {
+            heart:    '<path d="M12 20s-6.5-4.3-6.5-9A3.5 3.5 0 0 1 12 7.5 3.5 3.5 0 0 1 18.5 11c0 4.7-6.5 9-6.5 9z"/>',
+            scissors: '<circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M20 4 8.5 15.5"/><path d="M14.5 14.5 20 20"/><path d="M8.5 8.5 12 12"/>',
+            photos:   '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.6"/><path d="M21 16l-5-5L5 21"/>',
+            sparkle:  '<path d="M12 2.5l1.9 6.1 6.1 1.9-6.1 1.9L12 18.5l-1.9-6.1L4 10.5l6.1-1.9z"/>',
+            camera:   '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="3.5"/>',
+            calendar: '<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M16 2.5v4M8 2.5v4M3 10h18"/>',
+            diamond:  '<path d="M12 3l7 8-7 10-7-10z"/>'
+        };
+        if (/livr|remise|pr[êe]t/.test(s))                       return I.heart;
+        if (/montage|mont\b/.test(s))                            return I.scissors;
+        if (/tri|rush|s[ée]lection|d[ée]rush/.test(s))           return I.photos;
+        if (/final|[ée]talonn|color|mix|son|sound/.test(s))      return I.sparkle;
+        if (/pr[ée]vu|planif|pr[ée]para|rep[ée]rage|devis/.test(s)) return I.calendar;
+        if (/tourn|shooting|captation|prise de vue|film/.test(s))   return I.camera;
+        return I.diamond;
+    }
+
     function render(p) {
         document.body.classList.remove("loading");
         const steps = Array.isArray(p.steps) ? p.steps : [];
@@ -702,8 +723,7 @@
 
             const stateClass = isActive ? "is-active" : isCompleted ? "is-done" : "is-todo";
             const dotClass = isActive ? "is-active pulse-active" : isCompleted ? "is-done" : "is-todo";
-            const dotInner = isCompleted ? `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>` :
-                             isActive ? `<span class="core"></span>` : '';
+            const dotInner = `<svg class="tl-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${stepIcon(name)}</svg>`;
             const date = p.step_dates && p.step_dates[index] ? fmtDate(p.step_dates[index]) : "";
             const stateLabel = isCompleted ? "Terminé" : isActive ? "En cours" : "À venir";
 

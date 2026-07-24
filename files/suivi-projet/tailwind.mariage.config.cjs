@@ -18,6 +18,10 @@ const colors = {
 };
 module.exports = {
   content: ['./public/suivi-mariage.html'],
+  // La page mariage est stylée en CSS vanilla (bloc <style> inline) et ne dépend
+  // plus de Tailwind que pour ces 2 utilitaires, dont `flex` est ajouté par JS au
+  // bouton livraison (donc invisible au scan du HTML → à garder explicitement).
+  safelist: ['flex', 'hidden'],
   theme: {
     extend: {
       colors,

@@ -28,165 +28,600 @@
     <meta name="apple-mobile-web-app-title" content="PRISMAE" />
     <meta name="mobile-web-app-capable" content="yes" />
 
-    <!-- Style "Mariage" (ivoire / or). Variante commutée par projet dans l'admin,
-         reprise de la charte du site de mariage. Porte d'entrée : suivi.html. -->
+    <!-- Style "Mariage" (ivoire / or) — repris fidèlement de la charte du nouveau
+         site de mariage (Jour J) : Pretty Dahlia en script, Copperplate gravé,
+         LEMON MILK pour les labels, or dégradé signature, cartes verre dépoli,
+         grain papier et doodles romantiques. Porte d'entrée : suivi.html. -->
 
     <!-- Client Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+    <link rel="stylesheet" href="fonts-mariage.css" />
+    <link rel="stylesheet" href="styles-mariage.css" />
+
     <style>
+        /* =====================================================================
+           Charte "Jour J" — variables reprises du site de mariage
+           ===================================================================== */
+        :root {
+            --paper: #f7f7f7;
+            --paper-soft: #ffffff;
+            --paper-warm: #efefef;
+            --ink: #2d2418;
+            --ink-soft: #6f5b40;
+            --muted: #9b8664;
+            --gold: #b88b36;
+            --gold-deep: #7b5618;
+            --gold-hi: #f0d28a;
+            --wine: #572b2e;
+            --line: rgba(45, 36, 24, .14);
+            --line-strong: rgba(123, 86, 24, .32);
+            --glass: rgba(255, 255, 255, .72);
+            --shadow: 0 28px 80px rgba(63, 42, 16, .16);
+            --card-shadow: 0 22px 70px rgba(63, 42, 16, .08);
+            --gold-grad: linear-gradient(112deg, #7c5517 0%, #bd8d35 30%, #f0d28a 50%, #b7832e 72%, #6b4613 100%);
+            --script: 'Pretty Dahlia', cursive;
+            --display: 'Copperplate Gothic', serif;
+            --sans: 'LEMON MILK', system-ui, sans-serif;
+            --read: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            --flare: 'FcoFlares', serif;
+            --ease: cubic-bezier(.22, 1, .36, 1);
+        }
+
+        html { scroll-behavior: smooth; }
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: safe center;
+            justify-content: center;
+            padding: clamp(18px, 4vw, 48px);
+            background-color: var(--paper);
+            background-image:
+                radial-gradient(circle at 15% 8%, rgba(184, 139, 54, .10), transparent 30rem),
+                radial-gradient(circle at 92% 12%, rgba(87, 43, 46, .06), transparent 24rem),
+                linear-gradient(180deg, #ffffff, #f7f7f7 44%, #f2f2f2);
+            background-attachment: fixed;
+            color: var(--ink);
+            font-family: var(--read);
+            line-height: 1.65;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+        }
+
         /* Grain papier (SVG inline, multiply) — aucune dépendance externe */
         body::before {
             content: ""; position: fixed; inset: 0;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
             opacity: 0.05; mix-blend-mode: multiply; pointer-events: none; z-index: 50;
         }
-        body {
-            background-color: #f7f7f7; color: #2d2418;
-            background-image:
-                radial-gradient(circle at 15% 8%, rgba(184,139,54,.10), transparent 30rem),
-                radial-gradient(circle at 92% 12%, rgba(87,43,46,.06), transparent 24rem),
-                linear-gradient(180deg, #ffffff, #f7f7f7 44%, #f2f2f2);
-            background-attachment: fixed;
+
+        /* Ornements dorés (FcoFlares) */
+        .flare { font-family: var(--flare); color: var(--gold); line-height: 1; }
+        .gold-text {
+            background: var(--gold-grad);
+            -webkit-background-clip: text; background-clip: text;
+            color: transparent; -webkit-text-fill-color: transparent;
         }
 
-        /* Bouton "livraison" doré (dégradé signature du site mariage) */
-        .btn-gold { background: linear-gradient(112deg, #7c5517 0%, #bd8d35 30%, #f0d28a 50%, #b7832e 72%, #6b4613 100%); color: #2d2418; }
+        /* =====================================================================
+           Squelette, porte d'accès, états
+           ===================================================================== */
+        #skeleton { display: none; }
+        body.loading #skeleton { display: grid; }
+        body.loading #app { display: none; }
 
-        @keyframes pulse-gold {
-            0% { box-shadow: 0 0 0 0 rgba(184,139,54,.55); }
-            70% { box-shadow: 0 0 0 15px rgba(184,139,54,0); }
-            100% { box-shadow: 0 0 0 0 rgba(184,139,54,0); }
-        }
-        .pulse-active { animation: pulse-gold 2s infinite; }
+        #emailGate { display: none; }
+        body.gated #emailGate { display: flex; }
+        body.gated #app, body.gated #skeleton { display: none; }
+
         .fade-in { animation: fadeIn 1s ease-out forwards; opacity: 0; transform: translateY(10px); }
         @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
-        #progress-line { transition: height 1s cubic-bezier(.4,0,.2,1); }
 
-        /* squelette de chargement (sur fond clair) */
-        .sk { display:block; border-radius:6px;
-            background:linear-gradient(90deg, rgba(45,36,24,.05) 25%, rgba(45,36,24,.10) 37%, rgba(45,36,24,.05) 63%);
-            background-size:400% 100%; animation:shimmer 1.5s ease-in-out infinite; }
-        @keyframes shimmer { 0%{background-position:100% 50%} 100%{background-position:0 50%} }
-        #skeleton { display:none; }
-        body.loading #skeleton { display:grid; }
-        body.loading #app { display:none; }
+        .sk {
+            display: block; border-radius: 10px;
+            background: linear-gradient(90deg, rgba(45,36,24,.05) 25%, rgba(45,36,24,.10) 37%, rgba(45,36,24,.05) 63%);
+            background-size: 400% 100%; animation: shimmer 1.5s ease-in-out infinite;
+        }
+        @keyframes shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
 
-        /* Porte d'accès : email obligatoire avant d'afficher le suivi */
-        #emailGate { display:none; }
-        body.gated #emailGate { display:flex; }
-        body.gated #app, body.gated #skeleton { display:none; }
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(184, 139, 54, .55); }
+            70% { box-shadow: 0 0 0 13px rgba(184, 139, 54, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(184, 139, 54, 0); }
+        }
+        .pulse-active { animation: pulse-gold 2s infinite; }
 
+        /* =====================================================================
+           Décor : doodles romantiques (coins)
+           ===================================================================== */
+        .doodle {
+            position: fixed; z-index: -1; pointer-events: none; opacity: .5;
+            color: var(--ink-soft);
+        }
+        .doodle-star { top: 6%; left: 4%; width: 34px; color: var(--gold); transform: rotate(-8deg); }
+        .doodle-heart { bottom: 8%; right: 5%; width: 40px; color: var(--wine); opacity: .45; transform: rotate(8deg); }
+        .doodle-rings { top: 8%; right: 6%; width: 70px; opacity: .4; transform: rotate(-6deg); }
+
+        /* =====================================================================
+           Layout général
+           ===================================================================== */
+        #app {
+            position: relative;
+            width: 100%;
+            max-width: 1120px;
+            margin: auto;
+        }
+        .app-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px 22px;
+            margin-bottom: clamp(22px, 3vw, 38px);
+            padding-bottom: 22px;
+            border-bottom: 1px solid var(--line);
+        }
+        .app-brand {
+            display: flex; flex-direction: column; gap: 2px;
+        }
+        .app-brand .kicker {
+            font-family: var(--display);
+            font-size: 10px; font-weight: 700;
+            letter-spacing: .28em; text-transform: uppercase;
+            color: var(--gold-deep);
+        }
+        .app-brand .studio {
+            font-family: var(--script);
+            font-size: clamp(32px, 5vw, 44px);
+            line-height: .9; color: var(--ink);
+        }
+        .app-head .head-flare {
+            font-family: var(--flare); font-size: 26px; color: var(--gold); opacity: .8;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: clamp(20px, 3vw, 34px);
+        }
+        @media (min-width: 1000px) {
+            .grid { grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); align-items: start; }
+        }
+
+        /* ----- Colonne gauche : informations projet ----- */
+        .info { display: flex; flex-direction: column; gap: 26px; }
+
+        .eyebrow {
+            display: inline-flex; align-items: center; gap: 8px;
+            font-family: var(--display);
+            font-size: 11px; font-weight: 700;
+            letter-spacing: .22em; text-transform: uppercase;
+            color: var(--gold-deep);
+        }
+        .eyebrow .flare { font-size: 13px; }
+
+        .project-title {
+            margin: 14px 0 0;
+            font-family: var(--display);
+            font-size: clamp(28px, 4.4vw, 46px);
+            font-weight: 700; line-height: 1.04;
+            letter-spacing: .04em; text-transform: uppercase;
+            color: var(--ink);
+        }
+        .couple {
+            margin: 6px 0 0;
+            font-family: var(--script);
+            font-size: clamp(34px, 5.4vw, 52px);
+            line-height: 1; padding-bottom: .06em;
+        }
+        .lede {
+            margin: 16px 0 0;
+            max-width: 46ch;
+            color: var(--ink-soft);
+            font-size: 15px; line-height: 1.7;
+        }
+
+        /* Cartes métadonnées */
+        .meta-cards {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .meta-card {
+            padding: 16px 18px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: var(--glass);
+            box-shadow: 0 14px 40px rgba(63, 42, 16, .06);
+            backdrop-filter: blur(8px);
+        }
+        .meta-card .label {
+            display: block; margin-bottom: 6px;
+            font-family: var(--display);
+            font-size: 9px; font-weight: 700;
+            letter-spacing: .18em; text-transform: uppercase;
+            color: var(--muted);
+        }
+        .meta-card .value {
+            font-family: var(--sans);
+            font-size: 15px; font-weight: 500;
+            letter-spacing: .01em; color: var(--ink);
+        }
+        .meta-card .value.gold { color: var(--gold-deep); }
+
+        /* Le mot de l'équipe */
+        .note {
+            position: relative;
+            padding: 22px 24px;
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--gold);
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(255,255,255,.9), rgba(242,236,226,.7));
+            box-shadow: var(--card-shadow);
+        }
+        .note .note-label {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 10px;
+            font-family: var(--display);
+            font-size: 10px; font-weight: 700;
+            letter-spacing: .18em; text-transform: uppercase;
+            color: var(--gold-deep);
+        }
+        .note .note-text {
+            margin: 0; color: var(--ink);
+            font-family: var(--read); font-size: 15px; font-style: italic; line-height: 1.7;
+        }
+
+        /* Livraison — bouton or signature */
+        .delivery {
+            align-items: center; justify-content: space-between; gap: 20px;
+            padding: 20px 24px;
+            border-radius: 18px;
+            background: var(--gold-grad);
+            color: var(--ink);
+            box-shadow: 0 18px 50px rgba(123, 86, 24, .28);
+            transition: transform .25s var(--ease), box-shadow .25s ease, filter .25s ease;
+        }
+        .delivery:hover { transform: translateY(-2px); filter: brightness(1.03); box-shadow: 0 24px 60px rgba(123, 86, 24, .34); }
+        .delivery:active { transform: translateY(0) scale(.99); }
+        .delivery .d-kicker {
+            display: block;
+            font-family: var(--display);
+            font-size: 10px; font-weight: 700;
+            letter-spacing: .2em; text-transform: uppercase;
+            opacity: .72;
+        }
+        .delivery .d-title {
+            display: block; margin-top: 2px;
+            font-family: var(--script); font-size: 30px; line-height: 1;
+        }
+        .delivery svg { width: 22px; height: 22px; flex: 0 0 auto; transition: transform .3s var(--ease); }
+        .delivery:hover svg { transform: translateX(4px); }
+
+        /* Boutons secondaires (partage / question) */
+        .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+        .ghost-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            min-height: 42px; padding: 0 18px;
+            border: 1px solid var(--line-strong);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .55);
+            color: var(--ink-soft);
+            font-family: var(--sans);
+            font-size: 10px; font-weight: 500;
+            letter-spacing: .14em; text-transform: uppercase;
+            transition: transform .2s var(--ease), border-color .2s ease, color .2s ease, background .2s ease;
+        }
+        .ghost-btn svg { width: 16px; height: 16px; }
+        .ghost-btn:hover { transform: translateY(-1px); border-color: var(--gold); color: var(--ink); background: rgba(255,255,255,.85); }
+
+        .ask-panel {
+            padding: 18px 20px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: var(--glass);
+            box-shadow: var(--card-shadow);
+            font-size: 14px;
+        }
+        .ask-panel p { margin: 0; color: var(--ink-soft); }
+        .ask-row { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+        .ask-row a { color: var(--gold-deep); text-decoration: underline; text-underline-offset: 3px; }
+
+        /* ----- Colonne droite : timeline ----- */
+        .panel {
+            position: relative;
+            overflow: hidden;
+            padding: clamp(26px, 3.4vw, 44px);
+            border: 1px solid rgba(255, 255, 255, .6);
+            border-radius: 24px;
+            background: var(--glass);
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(10px);
+        }
+        .panel-rings {
+            position: absolute; top: 22px; right: 24px;
+            color: var(--gold); opacity: .18; pointer-events: none;
+        }
+        .panel-head {
+            display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+            margin-bottom: clamp(24px, 3vw, 40px);
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--line);
+        }
+        .panel-head h2 {
+            margin: 0;
+            font-family: var(--display);
+            font-size: clamp(16px, 1.8vw, 21px);
+            font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+            color: var(--ink);
+        }
+        .panel-head .count {
+            font-family: var(--sans);
+            font-size: 11px; font-weight: 500; letter-spacing: .06em;
+            color: var(--muted); white-space: nowrap;
+        }
+
+        .timeline { position: relative; }
+        .timeline-rail {
+            position: absolute; top: 6px; bottom: 6px; left: 13px;
+            width: 2px; background: var(--line); border-radius: 2px;
+        }
+        #progress-line {
+            position: absolute; top: 6px; left: 13px;
+            width: 2px; border-radius: 2px;
+            background: var(--gold-grad);
+            transition: height 1s cubic-bezier(.4, 0, .2, 1);
+        }
+        #timeline-container { position: relative; display: flex; flex-direction: column; gap: 30px; }
+
+        .tl-item { position: relative; padding-left: 46px; transition: opacity .3s ease; }
+        .tl-item.is-todo { opacity: .55; }
+        .tl-dot {
+            position: absolute; left: 13px; top: 1px;
+            display: grid; place-items: center;
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            border: 2px solid var(--line-strong);
+            background: var(--paper-soft);
+            transform: translateX(-50%);
+            transition: background .5s ease, border-color .5s ease;
+        }
+        .tl-dot.is-done, .tl-dot.is-active {
+            border-color: var(--paper-soft);
+            background: var(--gold-grad);
+            box-shadow: 0 6px 16px rgba(123, 86, 24, .3);
+        }
+        .tl-dot svg { width: 13px; height: 13px; color: #fff; }
+        .tl-dot .core { width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+        .tl-state {
+            display: block; margin-bottom: 4px;
+            font-family: var(--sans);
+            font-size: 9px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase;
+            color: var(--muted);
+        }
+        .tl-item.is-active .tl-state { color: var(--gold-deep); }
+        .tl-title {
+            margin: 0;
+            font-family: var(--display);
+            font-size: clamp(15px, 1.7vw, 18px);
+            font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+            line-height: 1.25; color: var(--muted);
+        }
+        .tl-item.is-done .tl-title, .tl-item.is-active .tl-title { color: var(--ink); }
+        .tl-date { margin: 5px 0 0; font-family: var(--sans); font-size: 11px; letter-spacing: .04em; color: var(--muted); }
+
+        /* =====================================================================
+           Porte d'accès (email)
+           ===================================================================== */
+        #emailGate {
+            flex-direction: column; align-items: center; text-align: center;
+            width: 100%; max-width: 400px; margin: auto;
+            padding: clamp(30px, 5vw, 46px) clamp(24px, 4vw, 38px);
+            border: 1px solid rgba(255, 255, 255, .6);
+            border-radius: 24px;
+            background: var(--glass);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+        }
+        #emailGate::before {
+            content: ''; display: block;
+            width: 100%; height: 4px; max-width: 60px;
+            margin: 0 auto 22px;
+            border-radius: 4px;
+            background: var(--gold-grad);
+        }
+        .gate-eyebrow {
+            font-family: var(--display);
+            font-size: 10px; font-weight: 700; letter-spacing: .26em; text-transform: uppercase;
+            color: var(--gold-deep);
+        }
+        .gate-title {
+            margin: 12px 0 0;
+            font-family: var(--script);
+            font-size: clamp(40px, 9vw, 56px); line-height: .92;
+            color: var(--ink);
+        }
+        .gate-sub { margin: 14px 0 0; color: var(--ink-soft); font-size: 14px; line-height: 1.6; }
+        #gateForm { margin-top: 26px; width: 100%; display: flex; flex-direction: column; gap: 12px; }
+        .field-pill {
+            width: 100%; min-height: 50px;
+            padding: 0 20px;
+            border: 1px solid var(--line-strong);
+            border-radius: 999px;
+            background: var(--paper-soft);
+            color: var(--ink);
+            font-family: var(--read); font-size: 14px;
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+        .field-pill::placeholder { color: var(--muted); }
+        .field-pill:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(184, 139, 54, .18); }
+        .btn-primary {
+            min-height: 50px; padding: 0 24px;
+            border: 0; border-radius: 999px;
+            background: var(--ink); color: var(--paper-soft);
+            font-family: var(--sans); font-size: 11px; font-weight: 500;
+            letter-spacing: .16em; text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 16px 38px rgba(45, 36, 24, .18);
+            transition: transform .2s var(--ease), background .25s ease;
+        }
+        .btn-primary:hover { transform: translateY(-2px); background: var(--wine); }
+        .btn-primary:active { transform: translateY(0) scale(.98); }
+        .gate-error { margin: 2px 0 0; color: #b0342c; font-size: 13px; }
+
+        /* =====================================================================
+           Squelette de chargement
+           ===================================================================== */
+        #skeleton {
+            width: 100%; max-width: 1120px; margin: auto;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 34px;
+        }
+        @media (min-width: 1000px) {
+            #skeleton { grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); }
+        }
+        .sk-col { display: flex; flex-direction: column; gap: 18px; }
+        .sk-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+
+        /* Message d'état (lien invalide, erreur, etc.) */
+        .state-msg { text-align: center; max-width: 30ch; margin: auto; padding: 20px; }
+        .state-msg .flare { display: block; font-size: 30px; margin-bottom: 14px; }
+        .state-msg .st-title {
+            font-family: var(--display); font-size: clamp(20px, 3vw, 26px);
+            font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink);
+        }
+        .state-msg .st-detail { margin-top: 12px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+        @media (max-width: 640px) {
+            .meta-cards { grid-template-columns: 1fr; }
+            .doodle-rings { display: none; }
+        }
         @media (prefers-reduced-motion: reduce) {
-            .pulse-active, .fade-in, .sk { animation: none; opacity:1; transform:none; }
+            .pulse-active, .fade-in, .sk { animation: none; opacity: 1; transform: none; }
+            html { scroll-behavior: auto; }
+            * { transition-duration: .01ms !important; }
         }
     </style>
-    <link rel="stylesheet" href="fonts-mariage.css" />
-    <link rel="stylesheet" href="styles-mariage.css" />
 </head>
 
-<body class="loading min-h-screen flex items-center justify-center p-4 sm:p-8 selection:bg-mariage-gold selection:text-mariage-paper">
+<body class="loading">
+
+    <!-- Doodles décoratifs (coins) -->
+    <svg class="doodle doodle-star" viewBox="0 0 100 100" aria-hidden="true">
+        <path d="M50 2 C54 36 64 46 98 50 C64 54 54 64 50 98 C46 64 36 54 2 50 C36 46 46 36 50 2Z" fill="currentColor"/>
+    </svg>
+    <svg class="doodle doodle-heart" viewBox="0 0 100 90" aria-hidden="true">
+        <path d="M50 85 C20 60 5 40 5 25 C5 10 18 2 32 2 C42 2 50 10 50 20 C50 10 58 2 68 2 C82 2 95 10 95 25 C95 40 80 60 50 85Z" fill="currentColor"/>
+    </svg>
 
     <!-- Porte d'accès : le client doit saisir son email pour voir le suivi -->
-    <section id="emailGate" class="flex-col items-center text-center max-w-xs w-full">
-        <p class="font-display text-mariage-gold text-xs uppercase tracking-[0.3em] mb-4">Accès à votre suivi</p>
-        <p class="font-script text-5xl text-mariage-ink leading-none">Entrez votre email</p>
-        <p class="mt-4 font-read text-sm text-mariage-muted">Pour accéder au suivi de votre projet et être prévenu à chaque nouvelle étape.</p>
-        <form id="gateForm" class="mt-6 w-full flex flex-col gap-3" novalidate>
-            <input id="gateEmail" type="email" required autocomplete="email" inputmode="email" placeholder="votre@email.com"
-                class="bg-mariage-papersoft border border-mariage-border rounded-lg px-4 py-3 font-read text-sm text-mariage-ink placeholder:text-mariage-muted focus:border-mariage-gold focus:outline-none" />
-            <button type="submit" class="bg-mariage-ink text-mariage-paper font-sans text-xs uppercase tracking-widest rounded-lg px-5 py-3 transition hover:bg-mariage-wine">Accéder au suivi</button>
-            <p id="gateError" class="hidden font-read text-sm text-red-600">Adresse email invalide.</p>
+    <section id="emailGate">
+        <p class="gate-eyebrow">Accès à votre suivi</p>
+        <p class="gate-title">Entrez votre email</p>
+        <p class="gate-sub">Pour accéder au suivi de votre projet et être prévenu à chaque nouvelle étape.</p>
+        <form id="gateForm" novalidate>
+            <input id="gateEmail" type="email" required autocomplete="email" inputmode="email" placeholder="votre@email.com" class="field-pill" />
+            <button type="submit" class="btn-primary">Accéder au suivi</button>
+            <p id="gateError" class="gate-error" hidden>Adresse email invalide.</p>
         </form>
     </section>
 
     <!-- Squelette de chargement -->
-    <div id="skeleton" class="max-w-5xl w-full grid-cols-1 lg:grid-cols-12 gap-8" aria-hidden="true">
-        <div class="lg:col-span-5 flex flex-col justify-center space-y-6">
-            <div class="sk h-3 w-40"></div>
-            <div class="sk h-12 w-3/4"></div>
-            <div class="sk h-3 w-full"></div>
-            <div class="grid grid-cols-2 gap-4">
-                <div class="sk h-20 rounded-lg"></div><div class="sk h-20 rounded-lg"></div>
-                <div class="sk h-20 rounded-lg"></div><div class="sk h-20 rounded-lg"></div>
+    <div id="skeleton" aria-hidden="true">
+        <div class="sk-col" style="justify-content:center;">
+            <div class="sk" style="height:12px;width:40%"></div>
+            <div class="sk" style="height:46px;width:78%"></div>
+            <div class="sk" style="height:12px;width:100%"></div>
+            <div class="sk-cards">
+                <div class="sk" style="height:78px;border-radius:16px"></div>
+                <div class="sk" style="height:78px;border-radius:16px"></div>
+                <div class="sk" style="height:78px;border-radius:16px"></div>
+                <div class="sk" style="height:78px;border-radius:16px"></div>
             </div>
         </div>
-        <div class="lg:col-span-7 sk h-[420px] rounded-2xl"></div>
+        <div class="sk" style="height:440px;border-radius:24px"></div>
     </div>
 
     <!-- Application -->
-    <div id="app" class="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 fade-in">
+    <div id="app" class="fade-in">
 
-        <!-- Colonne gauche : infos projet -->
-        <div class="lg:col-span-5 flex flex-col justify-center space-y-8">
-            <div>
-                <div class="flex items-center gap-2.5 mb-5">
-                    <span id="studioName" class="font-script text-4xl text-mariage-ink leading-none"></span>
+        <header class="app-head">
+            <div class="app-brand">
+                <span class="kicker">Suivi de projet</span>
+                <span id="studioName" class="studio"></span>
+            </div>
+            <span class="head-flare" aria-hidden="true">&#10042;</span>
+        </header>
+
+        <div class="grid">
+
+            <!-- Colonne gauche : infos projet -->
+            <div class="info">
+                <div>
+                    <p class="eyebrow"><span class="flare" aria-hidden="true">&#10022;</span>Votre film de mariage</p>
+                    <h1 id="projectTitle" class="project-title">—</h1>
+                    <p id="coupleName" class="couple gold-text hidden"></p>
+                    <p class="lede">
+                        Suivez l'avancement de votre film en temps réel. Chaque étape est mise à jour
+                        par notre équipe à mesure qu'elle est validée.
+                    </p>
                 </div>
-                <p class="font-display text-mariage-gold text-xs uppercase tracking-[0.3em] mb-3">Suivi de votre projet</p>
-                <h1 id="projectTitle" class="font-display text-3xl sm:text-4xl lg:text-5xl text-mariage-ink leading-tight uppercase tracking-tight">—</h1>
-                <p id="coupleName" class="hidden font-script text-4xl text-mariage-gold mt-2 leading-none"></p>
-                <p class="mt-5 font-read text-mariage-inksoft text-sm leading-relaxed">
-                    Suivez l'avancement de votre film en temps réel. Chaque étape est mise à jour par notre équipe à mesure qu'elle est validée.
-                </p>
-            </div>
 
-            <!-- Cartes métadonnées (générées) -->
-            <div id="metaCards" class="grid grid-cols-2 gap-4"></div>
+                <!-- Cartes métadonnées (générées) -->
+                <div id="metaCards" class="meta-cards"></div>
 
-            <!-- Le mot de l'équipe -->
-            <div id="noteBlock" class="hidden bg-mariage-papersoft border border-mariage-border p-5 rounded-lg shadow-[0_18px_50px_rgba(63,42,16,.08)]">
-                <p class="font-display text-[10px] text-mariage-gold uppercase tracking-wider mb-2">Le mot de l'équipe</p>
-                <p id="noteText" class="font-read italic text-mariage-ink text-sm leading-relaxed"></p>
-            </div>
+                <!-- Le mot de l'équipe -->
+                <div id="noteBlock" class="note hidden">
+                    <p class="note-label"><span class="flare" aria-hidden="true">&#10022;</span>Le mot de l'équipe</p>
+                    <p id="noteText" class="note-text"></p>
+                </div>
 
-            <!-- Livraison -->
-            <a id="deliveryLink" href="#" target="_blank" rel="noopener"
-               class="hidden group items-center justify-between btn-gold px-6 py-4 rounded-xl shadow-[0_18px_50px_rgba(123,86,24,.28)] transition hover:brightness-[1.03] active:scale-[.99]">
-                <span>
-                    <span class="block font-display text-[10px] uppercase tracking-[0.2em] opacity-70">C'est prêt</span>
-                    <span class="block font-script text-3xl leading-none mt-0.5">Votre livraison</span>
-                </span>
-                <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-            </a>
+                <!-- Livraison -->
+                <a id="deliveryLink" href="#" target="_blank" rel="noopener" class="delivery hidden">
+                    <span>
+                        <span class="d-kicker">C'est prêt</span>
+                        <span class="d-title">Votre livraison</span>
+                    </span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
 
-            <!-- Partage + question -->
-            <div class="flex flex-wrap gap-2">
-                <button id="shareBtn" type="button" class="inline-flex items-center gap-2 border border-mariage-border rounded-full px-4 py-2 font-sans text-xs uppercase tracking-widest text-mariage-muted transition hover:border-mariage-gold hover:text-mariage-ink">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
-                    <span id="shareLabel">Partager le suivi</span>
-                </button>
-                <button id="askBtn" type="button" class="inline-flex items-center gap-2 border border-mariage-border rounded-full px-4 py-2 font-sans text-xs uppercase tracking-widest text-mariage-muted transition hover:border-mariage-gold hover:text-mariage-ink">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    Poser une question
-                </button>
-            </div>
-            <div id="askPanel" class="hidden bg-mariage-papersoft border border-mariage-border p-4 rounded-lg font-read text-sm shadow-[0_18px_50px_rgba(63,42,16,.08)]">
-                <p class="text-mariage-inksoft">Une question sur votre projet ? Écrivez-nous :</p>
-                <div class="mt-2 flex flex-wrap items-center gap-3">
-                    <a id="askMailto" href="#" class="text-mariage-golddeep underline underline-offset-2">fvjeremie@gmail.com</a>
-                    <button id="askCopy" type="button" class="border border-mariage-border rounded-full px-3 py-1 text-xs text-mariage-muted transition hover:border-mariage-gold hover:text-mariage-ink">Copier l'adresse</button>
+                <!-- Partage + question -->
+                <div class="actions">
+                    <button id="shareBtn" type="button" class="ghost-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+                        <span id="shareLabel">Partager le suivi</span>
+                    </button>
+                    <button id="askBtn" type="button" class="ghost-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        Poser une question
+                    </button>
+                </div>
+                <div id="askPanel" class="ask-panel hidden">
+                    <p>Une question sur votre projet ? Écrivez-nous :</p>
+                    <div class="ask-row">
+                        <a id="askMailto" href="#">fvjeremie@gmail.com</a>
+                        <button id="askCopy" type="button" class="ghost-btn">Copier l'adresse</button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Colonne droite : timeline verticale -->
-        <div class="lg:col-span-7 bg-mariage-papersoft border border-mariage-border rounded-2xl p-8 sm:p-12 shadow-[0_28px_80px_rgba(63,42,16,.10)] relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-6 opacity-20 text-mariage-gold" aria-hidden="true">
-                <svg width="52" height="34" viewBox="0 0 52 34" fill="none" stroke="currentColor" stroke-width="1.4">
+            <!-- Colonne droite : timeline verticale -->
+            <div class="panel">
+                <svg class="panel-rings" width="52" height="34" viewBox="0 0 52 34" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
                     <circle cx="19" cy="17" r="12"/><circle cx="33" cy="17" r="12"/>
                 </svg>
-            </div>
 
-            <div class="flex items-end justify-between mb-10 border-b border-mariage-border pb-4">
-                <h2 class="font-display text-xl text-mariage-ink uppercase tracking-wide">État d'avancement</h2>
-                <span id="stepCount" class="font-sans text-[11px] text-mariage-muted"></span>
-            </div>
+                <div class="panel-head">
+                    <h2>État d'avancement</h2>
+                    <span id="stepCount" class="count"></span>
+                </div>
 
-            <div class="relative pl-6 sm:pl-10 pb-4">
-                <div class="absolute top-4 bottom-4 left-[11px] sm:left-[27px] w-[2px] bg-mariage-border"></div>
-                <div id="progress-line" class="absolute top-4 left-[11px] sm:left-[27px] w-[2px] bg-mariage-gold z-0" style="height: 0%;"></div>
-                <div id="timeline-container" class="space-y-8 relative z-10"></div>
+                <div class="timeline">
+                    <div class="timeline-rail"></div>
+                    <div id="progress-line" style="height: 0%;"></div>
+                    <div id="timeline-container"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -210,9 +645,10 @@
 
     function showMessage(titre, detail) {
         document.body.classList.remove("loading");
-        document.body.innerHTML = `<div class="text-center px-6">
-            <p class="font-display text-2xl text-mariage-ink uppercase tracking-wide">${titre}</p>
-            ${detail ? `<p class="mt-3 font-read text-sm text-mariage-muted max-w-xs mx-auto">${detail}</p>` : ""}
+        document.body.innerHTML = `<div class="state-msg">
+            <span class="flare" aria-hidden="true">&#10022;</span>
+            <p class="st-title">${titre}</p>
+            ${detail ? `<p class="st-detail">${detail}</p>` : ""}
         </div>`;
     }
 
@@ -238,9 +674,9 @@
         if (p.event_date)          cards.push(["Date du mariage", fmtDate(p.event_date), false]);
         if (!p.delivered && p.estimated_delivery) cards.push(["Livraison estimée", fmtDate(p.estimated_delivery), true]);
         document.getElementById("metaCards").innerHTML = cards.map(([l, v, gold]) => `
-            <div class="bg-mariage-papersoft border border-mariage-border p-4 rounded-lg shadow-[0_18px_50px_rgba(63,42,16,.06)]">
-                <p class="font-display text-[10px] text-mariage-muted uppercase tracking-wider mb-1">${l}</p>
-                <p class="font-sans text-sm ${gold ? 'text-mariage-golddeep' : 'text-mariage-ink'}">${v}</p>
+            <div class="meta-card">
+                <span class="label">${l}</span>
+                <span class="value ${gold ? 'gold' : ''}">${v}</span>
             </div>`).join("");
 
         // Note
@@ -264,24 +700,19 @@
             const isActive = index === cur && !p.delivered;
             const isPending = !isCompleted && !isActive;
 
-            const dotColor = isActive ? 'bg-mariage-gold pulse-active border-mariage-paper' :
-                             isCompleted ? 'bg-mariage-gold border-mariage-paper' :
-                             'bg-mariage-papersoft border-mariage-borderstrong';
-            const dotInner = isCompleted ? `<svg class="w-3 h-3 text-mariage-paper" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>` :
-                             isActive ? `<div class="w-2 h-2 rounded-full bg-mariage-paper"></div>` : '';
-            const titleColor = (isActive || isCompleted) ? 'text-mariage-ink' : 'text-mariage-muted';
-            const opacityStyle = isPending ? 'opacity-60' : 'opacity-100';
+            const stateClass = isActive ? "is-active" : isCompleted ? "is-done" : "is-todo";
+            const dotClass = isActive ? "is-active pulse-active" : isCompleted ? "is-done" : "is-todo";
+            const dotInner = isCompleted ? `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>` :
+                             isActive ? `<span class="core"></span>` : '';
             const date = p.step_dates && p.step_dates[index] ? fmtDate(p.step_dates[index]) : "";
             const stateLabel = isCompleted ? "Terminé" : isActive ? "En cours" : "À venir";
 
             container.insertAdjacentHTML('beforeend', `
-                <div class="flex items-start ${opacityStyle} transition-opacity duration-300">
-                    <div class="absolute left-0 sm:left-4 flex items-center justify-center w-6 h-6 rounded-full border-2 ${dotColor} mt-1.5 transition-colors duration-500 z-10" style="transform: translateX(-50%);">${dotInner}</div>
-                    <div class="ml-4 sm:ml-8">
-                        <p class="font-sans text-[10px] uppercase tracking-[0.2em] ${isActive ? 'text-mariage-gold' : 'text-mariage-muted'} mb-1">${stateLabel}</p>
-                        <h3 class="font-display text-lg sm:text-xl ${titleColor} leading-tight uppercase tracking-wide">${name}</h3>
-                        ${date ? `<p class="font-sans text-xs text-mariage-muted mt-1">${date}</p>` : ""}
-                    </div>
+                <div class="tl-item ${stateClass}">
+                    <span class="tl-dot ${dotClass}">${dotInner}</span>
+                    <span class="tl-state">${stateLabel}</span>
+                    <h3 class="tl-title">${name}</h3>
+                    ${date ? `<p class="tl-date">${date}</p>` : ""}
                 </div>`);
         });
 
@@ -329,8 +760,8 @@
             e.preventDefault();
             const email = document.getElementById("gateEmail").value.trim().toLowerCase();
             const err = document.getElementById("gateError");
-            if (!EMAIL_RE.test(email)) { err.classList.remove("hidden"); return; }
-            err.classList.add("hidden");
+            if (!EMAIL_RE.test(email)) { err.hidden = false; return; }
+            err.hidden = true;
             try { await sb.rpc("set_client_email", { token: currentToken, email }); } catch (_) {}
             try { localStorage.setItem(gateKey(currentToken), email); } catch (_) {}
             document.body.classList.remove("gated");

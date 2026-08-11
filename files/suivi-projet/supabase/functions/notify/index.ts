@@ -69,6 +69,7 @@ type Theme = {
   btnTransform: string;
   btnSize: string;
   ornament: string;      // caractère du séparateur ("" = filet simple)
+  logoFile: string;      // fichier servi depuis SITE_URL
 };
 
 const THEMES: Record<string, Theme> = {
@@ -112,6 +113,7 @@ const THEMES: Record<string, Theme> = {
     btnTransform: "none",
     btnSize: "15px",
     ornament: "",
+    logoFile: "icon-192.png",
   },
 
   // ---- STUDIO : noir cinéma, or, Playfair / DM Mono
@@ -154,6 +156,7 @@ const THEMES: Record<string, Theme> = {
     btnTransform: "uppercase",
     btnSize: "12px",
     ornament: "",
+    logoFile: "icon-192.png",
   },
 
   // ---- MARIAGE : papier ivoire, or gravé, script / Copperplate
@@ -196,6 +199,7 @@ const THEMES: Record<string, Theme> = {
     btnTransform: "uppercase",
     btnSize: "12px",
     ornament: "&#10022;",
+    logoFile: "logo-jourj.png",
   },
 };
 
@@ -264,7 +268,6 @@ Deno.serve(async (req) => {
 
   const SITE_URL = (Deno.env.get("SITE_URL") || "https://suivi-client.vercel.app").replace(/\/$/, "");
   const link = `${SITE_URL}/suivi.html?p=${encodeURIComponent(p.public_token)}`;
-  const logo = `${SITE_URL}/icon-192.png`;
   const studio = esc(p.studio_name || "Studio");
   const title = esc(p.project_title || "votre projet");
   const total = steps.length;
@@ -274,6 +277,8 @@ Deno.serve(async (req) => {
   // Le thème de l'email suit le style de la page client du projet.
   const style = p.style === "studio" || p.style === "mariage" ? p.style : "prismae";
   const t = THEMES[style];
+  // Logo de la marque : le « J » Jour J pour le mariage, le triangle PRISMAE sinon.
+  const logo = `${SITE_URL}/${t.logoFile}`;
   const isStudio = style === "studio";
   const isMariage = style === "mariage";
 

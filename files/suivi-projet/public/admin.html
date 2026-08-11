@@ -63,7 +63,22 @@
   dialog::-webkit-scrollbar-thumb { background:rgba(244,241,236,.16); border-radius:999px; border:4px solid #12161d; }
   dialog::-webkit-scrollbar-thumb:hover { background:rgba(244,241,236,.28); }
 
-  .sheet { padding:0 1.5rem 1.5rem; }
+  .sheet { padding:0 1.5rem; }
+  /* Deux colonnes dès qu'il y a la place : la fiche est longue, l'empiler
+     entièrement à la verticale gaspille tout l'écran sur un ordinateur. */
+  .sheet-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; }
+  .sheet-col { display:flex; flex-direction:column; gap:1rem; min-width:0; }
+  @media (min-width:900px) {
+    .sheet-grid { grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr); gap:1.5rem; align-items:start; }
+  }
+  /* Barre d'actions collée en bas : « Enregistrer » reste atteignable sans
+     avoir à redescendre tout le formulaire. */
+  .sheet-foot {
+    position:sticky; bottom:0; z-index:5;
+    display:flex; flex-wrap:wrap; align-items:center; gap:.5rem;
+    margin:1.5rem -1.5rem 0; padding:1rem 1.5rem;
+    background:#12161d; border-top:1px solid rgba(244,241,236,.08);
+  }
   .sheet-head {
     position:sticky; top:0; z-index:5;
     display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;
@@ -291,7 +306,7 @@ Livraison</textarea>
 </dialog>
 
 <!-- ====================== MODALE : DÉTAIL PROJET ====================== -->
-<dialog id="detailDialog" class="w-[calc(100%-1.5rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface p-0 text-ink">
+<dialog id="detailDialog" class="w-[calc(100%-2rem)] max-w-[1120px] max-h-[92dvh] overflow-y-auto rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface p-0 text-ink">
   <div class="sheet">
     <div class="sheet-head">
       <div class="min-w-0">
@@ -301,114 +316,121 @@ Livraison</textarea>
       <button id="detailClose" class="sheet-close" type="button" aria-label="Fermer la fiche" title="Fermer">&times;</button>
     </div>
 
-    <!-- Avancement -->
-    <div class="rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
-      <div class="flex items-center justify-between">
+    <!-- Deux colonnes sur ordinateur : édition à gauche, diffusion à droite.
+         Une seule colonne sous 900px (l'ordre du HTML fait foi). -->
+    <div class="sheet-grid">
+
+      <div class="sheet-col">
+        <!-- Avancement -->
+        <div class="rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
+          <div class="flex items-center justify-between gap-4">
+            <div class="min-w-0">
+              <p class="text-[10px] uppercase tracking-[0.18em] text-ink-muted">Étape en cours</p>
+              <p id="d_currentStep" class="mt-0.5 font-display text-xl font-bold text-accent-soft">—</p>
+            </div>
+            <span id="d_stepCount" class="shrink-0 font-mono text-xs text-ink-muted"></span>
+          </div>
+          <div class="mt-4 flex gap-2">
+            <button id="d_prevBtn" class="btn-ghost flex-1 text-sm">← Étape précédente</button>
+            <button id="d_nextBtn" class="btn-or flex-1 text-sm">Étape suivante →</button>
+          </div>
+        </div>
+
+        <!-- Style : réglage structurant (il décide de la page servie au client),
+             donc juste sous l'avancement. -->
         <div>
-          <p class="text-[10px] uppercase tracking-[0.18em] text-ink-muted">Étape en cours</p>
-          <p id="d_currentStep" class="mt-0.5 font-display text-xl font-bold text-accent-soft">—</p>
+          <label class="lbl">Style de la page client</label>
+          <select id="d_style" class="field" aria-label="Style de la page client">
+            <option value="prismae">Bleu — PRISMAE</option>
+            <option value="studio">Or — Studio (cinéma)</option>
+            <option value="mariage">Ivoire — Mariage</option>
+          </select>
         </div>
-        <span id="d_stepCount" class="font-mono text-xs text-ink-muted"></span>
-      </div>
-      <div class="mt-4 flex gap-2">
-        <button id="d_prevBtn" class="btn-ghost flex-1 text-sm">← Étape précédente</button>
-        <button id="d_nextBtn" class="btn-or flex-1 text-sm">Étape suivante →</button>
-      </div>
-    </div>
 
-    <!-- Historique des étapes (horodaté) -->
-    <details class="sect mt-4">
-      <summary>Historique des étapes</summary>
-      <div class="sect-body">
-        <div id="d_stepHistory" class="max-h-40 space-y-1 overflow-y-auto font-mono text-[11px] text-ink-soft"></div>
-      </div>
-    </details>
+        <!-- Édition complète des informations du projet -->
+        <details class="sect" id="d_infoSect">
+          <summary>Informations du projet</summary>
+          <div class="sect-body grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div class="md:col-span-2"><label class="lbl">Titre du projet</label><input id="d_title_in" class="field" /><p class="hint">Non affiché sur la page Mariage (les prénoms suffisent). Sert au titre des pages Bleu/Or, à l'onglet et au sujet des emails.</p></div>
+            <div class="md:col-span-2"><label class="lbl">Nom du client</label><input id="d_client" class="field" /></div>
+            <div class="md:col-span-2"><label class="lbl">Email du client (notifications)</label><input id="d_email" type="email" class="field" /></div>
+            <div><label class="lbl">Type de projet</label><input id="d_type" class="field" /></div>
+            <div><label class="lbl">Date de l'événement</label><input id="d_event" type="date" class="field" /></div>
+            <div><label class="lbl">Nom du studio</label><input id="d_studio" class="field" /></div>
+            <div><label class="lbl">Accroche studio</label><input id="d_tagline" class="field" /></div>
+            <div class="md:col-span-2">
+              <label class="lbl">Étapes du workflow (une par ligne)</label>
+              <textarea id="d_steps" class="field" rows="7"></textarea>
+            </div>
+          </div>
+        </details>
 
-    <!-- Édition complète des informations du projet -->
-    <details class="sect mt-4">
-      <summary>Informations du projet</summary>
-      <div class="sect-body grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div class="sm:col-span-2"><label class="lbl">Titre du projet</label><input id="d_title_in" class="field" /><p class="hint">Non affiché sur la page Mariage (les prénoms suffisent). Sert au titre des pages Bleu/Or, à l'onglet et au sujet des emails.</p></div>
-        <div class="sm:col-span-2"><label class="lbl">Nom du client</label><input id="d_client" class="field" /></div>
-        <div class="sm:col-span-2"><label class="lbl">Email du client (notifications)</label><input id="d_email" type="email" class="field" /></div>
-        <div><label class="lbl">Type de projet</label><input id="d_type" class="field" /></div>
-        <div><label class="lbl">Date de l'événement</label><input id="d_event" type="date" class="field" /></div>
-        <div><label class="lbl">Nom du studio</label><input id="d_studio" class="field" /></div>
-        <div><label class="lbl">Accroche studio</label><input id="d_tagline" class="field" /></div>
-        <div class="sm:col-span-2">
-          <label class="lbl">Étapes du workflow (une par ligne)</label>
-          <textarea id="d_steps" class="field" rows="7"></textarea>
+        <!-- Note client -->
+        <div>
+          <label class="lbl">Le mot de l'équipe (visible par le client)</label>
+          <textarea id="d_note" class="field" rows="3" placeholder="Optionnel…"></textarea>
         </div>
-      </div>
-    </details>
 
-    <!-- Style de la page client -->
-    <div class="mt-4">
-      <label class="lbl">Style de la page client</label>
-      <select id="d_style" class="field" aria-label="Style de la page client">
-        <option value="prismae">Bleu — PRISMAE</option>
-        <option value="studio">Or — Studio (cinéma)</option>
-        <option value="mariage">Ivoire — Mariage</option>
-      </select>
-    </div>
-
-    <!-- Note client -->
-    <div class="mt-4">
-      <label class="lbl">Le mot de l'équipe (visible par le client)</label>
-      <textarea id="d_note" class="field" rows="3" placeholder="Optionnel…"></textarea>
-    </div>
-
-    <!-- Livraison estimée (visible par le client) -->
-    <div class="mt-4">
-      <label class="lbl">Livraison estimée (optionnel)</label>
-      <input id="d_estimated" type="date" class="field" />
-    </div>
-
-    <!-- Livraison -->
-    <div class="mt-4 rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
-      <label class="flex items-center gap-3">
-        <input id="d_delivered" type="checkbox" class="h-4 w-4 accent-[#3b9bff]" />
-        <span class="text-sm">Marquer le projet comme livré</span>
-      </label>
-      <div class="mt-3">
-        <label class="lbl">Lien de livraison (Drive, WeTransfer…)</label>
-        <input id="d_deliveryUrl" type="url" class="field" placeholder="https://…" />
-      </div>
-    </div>
-
-    <div class="mt-5 flex flex-wrap gap-2">
-      <button id="d_archiveBtn" class="btn-ghost text-sm">Archiver</button>
-      <button id="d_duplicateBtn" class="btn-ghost text-sm">Dupliquer</button>
-    </div>
-
-    <p id="d_saveStatus" class="mt-4 hidden text-sm text-accent"></p>
-
-    <div class="mt-4 flex justify-between gap-3">
-      <button id="d_deleteBtn" class="btn-ghost text-sm text-red-400">Supprimer</button>
-      <button id="d_saveBtn" class="btn-or text-sm">Enregistrer</button>
-    </div>
-
-    <!-- Lien + QR code -->
-    <div class="mt-6 border-t border-[rgba(244,241,236,0.08)] pt-5">
-      <p class="lbl">Lien client</p>
-      <p id="d_views" class="mb-2 font-mono text-[11px] text-ink-muted"></p>
-      <details class="sect mb-3">
-        <summary>Journal des consultations</summary>
-        <div class="sect-body">
-          <div id="d_viewsLog" class="max-h-40 space-y-1 overflow-y-auto font-mono text-[11px] text-ink-soft"></div>
-        </div>
-      </details>
-      <div class="flex gap-2">
-        <input id="d_link" class="field font-mono text-xs" readonly />
-        <button id="d_copyBtn" class="btn-ghost shrink-0 text-sm">Copier</button>
-      </div>
-      <div class="mt-4 flex items-center gap-4">
-        <canvas id="d_qr" class="rounded-lg bg-white p-2" style="width:160px;height:160px"></canvas>
-        <div class="flex flex-col gap-2">
-          <button id="d_qrDownload" class="btn-ghost text-sm">Télécharger le QR (PNG)</button>
-          <a id="d_openLink" href="#" target="_blank" rel="noopener" class="btn-ghost text-center text-sm">Ouvrir la page client</a>
+        <!-- Livraison : la date prévisionnelle et la livraison effective sont le
+             même sujet, regroupées dans un seul bloc. -->
+        <div class="rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
+          <p class="mb-3 text-[10px] uppercase tracking-[0.18em] text-ink-muted">Livraison</p>
+          <div>
+            <label class="lbl">Livraison estimée (optionnel)</label>
+            <input id="d_estimated" type="date" class="field" />
+          </div>
+          <label class="mt-4 flex items-center gap-3">
+            <input id="d_delivered" type="checkbox" class="h-4 w-4 accent-[#3b9bff]" />
+            <span class="text-sm">Marquer le projet comme livré</span>
+          </label>
+          <div class="mt-3">
+            <label class="lbl">Lien de livraison (Drive, WeTransfer…)</label>
+            <input id="d_deliveryUrl" type="url" class="field" placeholder="https://…" />
+          </div>
         </div>
       </div>
+
+      <!-- Colonne de droite : ce qu'on transmet au client + les traces -->
+      <aside class="sheet-col">
+        <div class="rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
+          <p class="lbl">Lien client</p>
+          <p id="d_views" class="mb-3 font-mono text-[11px] text-ink-muted"></p>
+          <div class="flex gap-2">
+            <input id="d_link" class="field font-mono text-xs" readonly />
+            <button id="d_copyBtn" type="button" class="btn-ghost shrink-0 text-sm">Copier</button>
+          </div>
+          <div class="mt-4 flex flex-wrap items-center gap-4">
+            <canvas id="d_qr" class="shrink-0 rounded-lg bg-white p-2" style="width:150px;height:150px"></canvas>
+            <div class="flex min-w-[180px] flex-1 flex-col gap-2">
+              <button id="d_qrDownload" type="button" class="btn-ghost text-sm">Télécharger le QR (PNG)</button>
+              <a id="d_openLink" href="#" target="_blank" rel="noopener" class="btn-ghost text-center text-sm">Ouvrir la page client</a>
+            </div>
+          </div>
+        </div>
+
+        <details class="sect">
+          <summary>Historique des étapes</summary>
+          <div class="sect-body">
+            <div id="d_stepHistory" class="max-h-56 space-y-1 overflow-y-auto font-mono text-[11px] text-ink-soft"></div>
+          </div>
+        </details>
+
+        <details class="sect">
+          <summary>Journal des consultations</summary>
+          <div class="sect-body">
+            <div id="d_viewsLog" class="max-h-56 space-y-1 overflow-y-auto font-mono text-[11px] text-ink-soft"></div>
+          </div>
+        </details>
+      </aside>
+    </div>
+
+    <!-- Barre d'actions : reste visible en bas quel que soit le défilement -->
+    <div class="sheet-foot">
+      <button id="d_deleteBtn" type="button" class="btn-ghost text-sm text-red-400">Supprimer</button>
+      <button id="d_archiveBtn" type="button" class="btn-ghost text-sm">Archiver</button>
+      <button id="d_duplicateBtn" type="button" class="btn-ghost text-sm">Dupliquer</button>
+      <p id="d_saveStatus" class="hidden flex-1 text-sm text-accent"></p>
+      <button id="d_saveBtn" type="button" class="btn-or ml-auto text-sm">Enregistrer</button>
     </div>
   </div>
 </dialog>
@@ -919,6 +941,9 @@ function openDetail(p) {
   loadViews(p.id);
   loadStepHistory(p.id);
   $("d_saveStatus").classList.add("hidden");
+  // Sur ordinateur il y a la place : on ouvre les informations d'emblée plutôt
+  // que d'imposer un clic. Sur mobile on garde le repli pour limiter le défilement.
+  $("d_infoSect").open = window.matchMedia("(min-width:900px)").matches;
   detailDialog.showModal();
 }
 $("detailClose").addEventListener("click", () => detailDialog.close());

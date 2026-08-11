@@ -1,4 +1,18 @@
-# Notifications email (Brevo, sans nom de domaine) — mise en place
+# Notifications email — mise en place
+
+> ⚠️ MISE À JOUR : le projet envoie désormais via **Resend** (et non Brevo), en
+> réutilisant le domaine **jourjstudio.com déjà vérifié chez Resend** (bonne
+> délivrabilité, pas de spam). Concrètement, par rapport au guide Brevo ci-dessous :
+> - Secret **`RESEND_API_KEY`** (la même clé que le site jourjstudio.com) au lieu de `BREVO_API_KEY`.
+> - **`SENDER_EMAIL`** = `site@jourjstudio.com` (défaut si non renseigné) ; `SENDER_NAME` facultatif (sinon le nom du studio du projet).
+> - Réponses dirigées vers `contact@jourjstudio.com`.
+> - **Le Database Webhook doit exister** : sans lui, la fonction `notify` n'est JAMAIS
+>   appelée (aucune ligne dans les logs) et aucun email ne part. Voir §4.
+>
+> Le guide Brevo ci-dessous reste valable pour la logique (webhook, test, secrets) :
+> remplace simplement « Brevo » par « Resend » et la clé correspondante.
+
+## (Ancien) guide Brevo, sans nom de domaine
 
 Le client reçoit un email automatique **à chaque changement d'étape** et **à la livraison**.
 Logique : `supabase/functions/notify/index.ts` (Edge Function) déclenchée par un **Database

@@ -1,10 +1,12 @@
 // =====================================================================
-// Notifications client — Supabase Edge Function (Deno) — envoi via BREVO
+// Notifications client — Supabase Edge Function (Deno) — envoi via RESEND
 // Déclenchée par un Database Webhook sur UPDATE de la table `projects`.
 // Email responsive (tableau + styles en ligne) qui rend bien dans tous les
-// clients mail. Sans nom de domaine (expéditeur unique vérifié Brevo).
+// clients mail. Expéditeur sur le domaine vérifié chez Resend (jourjstudio.com)
+// → bonne délivrabilité (SPF/DKIM alignés), pas de spam.
 //
-// Secrets : BREVO_API_KEY, SENDER_EMAIL, SENDER_NAME, SITE_URL, WEBHOOK_SECRET
+// Secrets : RESEND_API_KEY, SENDER_EMAIL (défaut site@jourjstudio.com),
+//           SENDER_NAME, SITE_URL, WEBHOOK_SECRET
 // =====================================================================
 
 const MONTHS = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
@@ -106,23 +108,27 @@ Deno.serve(async (req) => {
   </table>
   </body></html>`;
 
-  const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+  // Expéditeur sur le domaine vérifié chez Resend. Le nom affiché suit le studio
+  // du projet ; l'adresse reste sur jourjstudio.com pour l'alignement SPF/DKIM.
+  const fromName = p.studio_name || Deno.env.get("SENDER_NAME") || "Jour J Studio";
+  const fromAddr = Deno.env.get("SENDER_EMAIL") || "site@jourjstudio.com";
+  const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      "api-key": Deno.env.get("BREVO_API_KEY") ?? "",
+      "Authorization": `Bearer ${Deno.env.get("RESEND_API_KEY") ?? ""}`,
       "Content-Type": "application/json",
-      "accept": "application/json",
     },
     body: JSON.stringify({
-      sender: { name: Deno.env.get("SENDER_NAME") || "PRISMAE", email: Deno.env.get("SENDER_EMAIL") },
-      to: [{ email: p.client_email }],
+      from: `${fromName} <${fromAddr}>`,
+      to: [p.client_email],
+      reply_to: "contact@jourjstudio.com",
       subject,
-      htmlContent: html,
+      html,
     }),
   });
 
   if (!resp.ok) {
-    console.error("Brevo error", await resp.text());
+    console.error("Resend error", await resp.text());
     return new Response("email failed", { status: 502 });
   }
   return new Response("sent", { status: 200 });

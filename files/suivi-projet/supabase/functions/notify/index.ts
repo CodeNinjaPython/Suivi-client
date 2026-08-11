@@ -37,7 +37,9 @@ Deno.serve(async (req) => {
   const steps: string[] = Array.isArray(p.steps) ? p.steps : [];
   const justDelivered = p.delivered === true && old.delivered !== true;
   const stepChanged = p.current_step !== old.current_step;
-  if (!justDelivered && !stepChanged) return new Response("no change", { status: 200 });
+  // Le client vient de renseigner son email (porte email) → email de confirmation d'inscription.
+  const justSubscribed = !old.client_email && !!p.client_email;
+  if (!justDelivered && !stepChanged && !justSubscribed) return new Response("no change", { status: 200 });
 
   const SITE_URL = (Deno.env.get("SITE_URL") || "https://suivi-client.vercel.app").replace(/\/$/, "");
   const link = `${SITE_URL}/suivi.html?p=${encodeURIComponent(p.public_token)}`;
@@ -60,12 +62,16 @@ Deno.serve(async (req) => {
       : Deno.env.get("REVIEW_URL_PRISMAE"))
     || Deno.env.get("REVIEW_URL") || "";
 
-  const subject = justDelivered
+  const subject = justSubscribed
+    ? `Suivi activé — ${p.project_title || p.client_name || "votre suivi"}`
+    : justDelivered
     ? `Votre projet est livré — ${p.project_title}`
     : `Nouvelle étape : ${steps[cur] || ""} — ${p.project_title}`;
 
-  const eyebrow = justDelivered ? "Projet livré" : `Étape ${cur + 1} / ${total}`;
-  const heading = justDelivered
+  const eyebrow = justSubscribed ? "Suivi activé" : justDelivered ? "Projet livré" : `Étape ${cur + 1} / ${total}`;
+  const heading = justSubscribed
+    ? `C'est noté&nbsp;! Vous serez prévenu(e) par email à chaque nouvelle étape de votre projet.`
+    : justDelivered
     ? `Votre projet « ${title} » est livré.`
     : `Votre projet « ${title} » avance : <span style="color:${accent}">${stepName}</span>.`;
 

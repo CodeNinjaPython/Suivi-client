@@ -683,8 +683,12 @@
         const cur = Math.min(p.current_step, last);
 
         document.getElementById("studioName").textContent = p.studio_name || "Jérémie & Jeannette";
-        document.getElementById("projectTitle").textContent = p.project_title || "—";
-        document.title = (p.project_title || "Suivi") + " — Suivi";
+        // Titre du projet : masqué s'il est laissé vide (les prénoms des mariés suffisent)
+        const pt = document.getElementById("projectTitle");
+        const titleTxt = (p.project_title || "").trim();
+        if (titleTxt) { pt.textContent = titleTxt; pt.classList.remove("hidden"); }
+        else { pt.textContent = ""; pt.classList.add("hidden"); }
+        document.title = (titleTxt || (p.client_name || "").trim() || "Suivi") + " — Suivi";
         document.getElementById("stepCount").textContent = p.delivered ? "Projet livré" : ("Étape " + (cur + 1) + " / " + steps.length);
 
         // Noms des mariés en script (comme sur le faire-part), si renseignés

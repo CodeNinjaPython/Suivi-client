@@ -563,7 +563,6 @@
                 <div>
                     <p class="eyebrow"><span class="flare" aria-hidden="true">&#10022;</span>Suivi de votre film</p>
                     <p id="coupleName" class="couple gold-text hidden"></p>
-                    <h1 id="projectTitle" class="project-title">—</h1>
                     <p class="lede">
                         Suivez l'avancement de votre film en temps réel. Chaque étape est mise à jour
                         par notre équipe à mesure qu'elle est validée.
@@ -683,11 +682,9 @@
         const cur = Math.min(p.current_step, last);
 
         document.getElementById("studioName").textContent = p.studio_name || "Jérémie & Jeannette";
-        // Titre du projet : masqué s'il est laissé vide (les prénoms des mariés suffisent)
-        const pt = document.getElementById("projectTitle");
+        // Titre du projet : jamais affiché sur la page mariage (les prénoms des mariés
+        // tiennent lieu de titre). La valeur ne sert qu'à l'onglet et aux emails.
         const titleTxt = (p.project_title || "").trim();
-        if (titleTxt) { pt.textContent = titleTxt; pt.classList.remove("hidden"); }
-        else { pt.textContent = ""; pt.classList.add("hidden"); }
         document.title = (titleTxt || (p.client_name || "").trim() || "Suivi") + " — Suivi";
         document.getElementById("stepCount").textContent = p.delivered ? "Projet livré" : ("Étape " + (cur + 1) + " / " + steps.length);
 
@@ -822,7 +819,7 @@
     // Poser une question : ouvre l'app mail pré-remplie. Change CONTACT_EMAIL au besoin.
     const CONTACT_EMAIL = "fvjeremie@gmail.com";
     document.getElementById("askBtn").addEventListener("click", () => {
-        const title = (document.getElementById("projectTitle").textContent || "mon projet").trim();
+        const title = (document.getElementById("coupleName").textContent || "votre projet").trim();
         const subject = encodeURIComponent("Question — " + title);
         const body = encodeURIComponent("Bonjour,\n\nÀ propos de « " + title + " » :\n\n");
         document.getElementById("askMailto").href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;

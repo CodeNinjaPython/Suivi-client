@@ -485,7 +485,7 @@ if (gateForm) {
 }
 
 // Démarrage : admin actif ou email déjà saisi → on charge directement ; sinon, porte.
-function boot() {
+async function boot() {
   const token = new URLSearchParams(location.search).get("p");
   currentToken = token;
   if (!token) {
@@ -498,6 +498,16 @@ function boot() {
   // Sinon : email déjà saisi sur cet appareil ?
   if (!unlocked) { try { unlocked = !!localStorage.getItem(gateKey(token)); } catch (_) {} }
   if (unlocked) { loadProject(); return; }
+
+  // Pas encore déverrouillé : on récupère le style AVANT la porte, pour que la
+  // porte email s'affiche dans le thème choisi pour le projet. On redirige vers
+  // la variante dédiée, qui présentera sa propre porte (dans le bon thème).
+  try {
+    const { data } = await sb.rpc("get_project_by_token", { token });
+    if (data && data.style === "studio")  { location.replace("suivi-studio.html"  + location.search); return; }
+    if (data && data.style === "mariage") { location.replace("suivi-mariage.html" + location.search); return; }
+  } catch (_) {}
+  // Style bleu (prismae) ou inconnu : porte bleue ici.
   showGate();
 }
 

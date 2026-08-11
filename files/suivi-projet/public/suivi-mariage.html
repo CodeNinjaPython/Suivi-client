@@ -667,12 +667,12 @@
             calendar: '<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M16 2.5v4M8 2.5v4M3 10h18"/>',
             diamond:  '<path d="M12 3l7 8-7 10-7-10z"/>'
         };
-        if (/livr|remise|pr[êe]t/.test(s))                       return I.heart;
-        if (/montage|mont\b/.test(s))                            return I.scissors;
-        if (/tri|rush|s[ée]lection|d[ée]rush/.test(s))           return I.photos;
-        if (/final|[ée]talonn|color|mix|son|sound/.test(s))      return I.sparkle;
+        if (/livr|remise|pr[êe]t|galerie|album/.test(s))            return I.heart;
+        if (/montage|mont\b/.test(s))                               return I.scissors;
+        if (/tri|rush|s[ée]lection|d[ée]rush|cull/.test(s))         return I.photos;
+        if (/final|[ée]talonn|color|mix|son|sound|retouch/.test(s)) return I.sparkle;
         if (/pr[ée]vu|planif|pr[ée]para|rep[ée]rage|devis/.test(s)) return I.calendar;
-        if (/tourn|shooting|captation|prise de vue|film/.test(s))   return I.camera;
+        if (/tourn|shooting|captation|prise de vue|s[ée]ance|shoot|pose|film|photo/.test(s)) return I.camera;
         return I.diamond;
     }
 

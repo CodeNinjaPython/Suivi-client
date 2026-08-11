@@ -184,7 +184,8 @@
         <label class="lbl">Modèle de workflow</label>
         <select id="createPreset" class="field" aria-label="Modèle de workflow">
           <option value="">Personnalisé</option>
-          <option value="mariage">Mariage</option>
+          <option value="mariage">Mariage — Film</option>
+          <option value="mariage_photo">Mariage — Photo</option>
           <option value="marque">Film de marque</option>
           <option value="doc">Documentaire</option>
         </select>
@@ -574,6 +575,7 @@ $("createCancel").addEventListener("click", () => createDialog.close());
 // Modèles de workflow : remplissent les étapes selon le type de projet
 const WORKFLOW_PRESETS = {
   mariage: ["Tournage prévu","Tournage en cours","Tournage terminé","Tri des rushs","Montage","Finalisation","Livraison"],
+  mariage_photo: ["Séance prévue","Séance en cours","Séance terminée","Tri des photos","Retouches","Finalisation","Livraison"],
   marque:  ["Brief validé","Pré-production","Tournage","Tri des rushs","Montage","Étalonnage","Finalisation","Livraison"],
   doc:     ["Repérages","Tournage","Dérushage","Montage","Étalonnage","Mixage","Finalisation","Livraison"],
 };

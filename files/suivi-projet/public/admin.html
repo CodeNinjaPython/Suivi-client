@@ -227,7 +227,7 @@
 </section>
 
 <!-- ====================== MODALE : CRÉER UN PROJET ====================== -->
-<dialog id="createDialog" class="w-[calc(100%-1.5rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface p-0 text-ink">
+<dialog id="createDialog" class="w-[calc(100%-2rem)] max-w-[980px] max-h-[92dvh] overflow-y-auto rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface p-0 text-ink">
   <form id="createForm" method="dialog" class="sheet">
     <div class="sheet-head">
       <div class="min-w-0">
@@ -237,69 +237,95 @@
       <button type="button" id="createClose" class="sheet-close" aria-label="Fermer" title="Fermer">&times;</button>
     </div>
 
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <div class="sm:col-span-2">
-        <label class="lbl">Nom du client *</label>
-        <input name="client_name" class="field" placeholder="Sophie & Marc" required />
+    <!-- Même disposition que la fiche : identité à gauche, workflow à droite. -->
+    <div class="sheet-grid">
+
+      <div class="sheet-col">
+        <!-- Le client -->
+        <div class="rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
+          <p class="mb-3 text-[10px] uppercase tracking-[0.18em] text-ink-muted">Le client</p>
+          <div class="grid grid-cols-1 gap-4">
+            <div>
+              <label class="lbl">Nom du client *</label>
+              <input name="client_name" class="field" placeholder="Sophie & Marc" required />
+            </div>
+            <div>
+              <label class="lbl">Email du client (pour les notifications)</label>
+              <input name="client_email" type="email" class="field" placeholder="client@exemple.com" />
+              <p class="hint">S'il est renseigné ici, le client n'aura pas à le saisir pour accéder à son suivi.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Le projet -->
+        <div class="rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
+          <p class="mb-3 text-[10px] uppercase tracking-[0.18em] text-ink-muted">Le projet</p>
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div class="md:col-span-2">
+              <label class="lbl">Titre du projet</label>
+              <input name="project_title" class="field" placeholder="Votre film de mariage" />
+              <p class="hint">Non affiché sur la page Mariage (les prénoms suffisent). Sert au titre des pages Bleu/Or, à l'onglet et au sujet des emails.</p>
+            </div>
+            <div>
+              <label class="lbl">Type de projet</label>
+              <input name="project_type" class="field" placeholder="Film de mariage" />
+            </div>
+            <div>
+              <label class="lbl">Date de l'événement</label>
+              <input name="event_date" type="date" class="field" />
+            </div>
+            <div>
+              <label class="lbl">Nom du studio</label>
+              <input name="studio_name" class="field" value="Jérémie & Jeannette" />
+            </div>
+            <div>
+              <label class="lbl">Accroche studio</label>
+              <input name="studio_tagline" class="field" value="Immortels Souvenirs" />
+            </div>
+            <div class="md:col-span-2">
+              <label class="lbl">Style de la page client</label>
+              <select name="style" class="field">
+                <option value="prismae">Bleu — PRISMAE</option>
+                <option value="studio">Or — Studio (cinéma)</option>
+                <option value="mariage">Ivoire — Mariage</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="sm:col-span-2">
-        <label class="lbl">Email du client (pour les notifications)</label>
-        <input name="client_email" type="email" class="field" placeholder="client@exemple.com" />
-      </div>
-      <div class="sm:col-span-2">
-        <label class="lbl">Titre du projet</label>
-        <input name="project_title" class="field" placeholder="Votre film de mariage" />
-        <p style="font-size:11px;color:#6b7280;margin-top:4px">Non affiché sur la page Mariage (les prénoms suffisent). Sert au titre des pages Bleu/Or, à l'onglet et au sujet des emails.</p>
-      </div>
-      <div>
-        <label class="lbl">Type de projet</label>
-        <input name="project_type" class="field" placeholder="Film de mariage" />
-      </div>
-      <div>
-        <label class="lbl">Date de l'événement</label>
-        <input name="event_date" type="date" class="field" />
-      </div>
-      <div>
-        <label class="lbl">Nom du studio</label>
-        <input name="studio_name" class="field" value="Jérémie & Jeannette" />
-      </div>
-      <div>
-        <label class="lbl">Accroche studio</label>
-        <input name="studio_tagline" class="field" value="Immortels Souvenirs" />
-      </div>
-      <div class="sm:col-span-2">
-        <label class="lbl">Style de la page client</label>
-        <select name="style" class="field">
-          <option value="prismae">Bleu — PRISMAE</option>
-          <option value="studio">Or — Studio (cinéma)</option>
-          <option value="mariage">Ivoire — Mariage</option>
-        </select>
-      </div>
-      <div class="sm:col-span-2">
-        <label class="lbl">Modèle de workflow</label>
-        <select id="createPreset" class="field" aria-label="Modèle de workflow">
-          <option value="">Personnalisé</option>
-          <option value="mariage">Mariage — Film</option>
-          <option value="mariage_photo">Mariage — Photo</option>
-          <option value="marque">Film de marque</option>
-          <option value="doc">Documentaire</option>
-        </select>
-      </div>
-      <div class="sm:col-span-2">
-        <label class="lbl">Étapes du workflow (une par ligne)</label>
-        <textarea name="steps" class="field" rows="7">Tournage prévu
+
+      <!-- Colonne de droite : le workflow, qu'on relit d'un bloc -->
+      <aside class="sheet-col">
+        <div class="rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
+          <p class="mb-3 text-[10px] uppercase tracking-[0.18em] text-ink-muted">Workflow</p>
+          <div>
+            <label class="lbl">Modèle</label>
+            <select id="createPreset" class="field" aria-label="Modèle de workflow">
+              <option value="">Personnalisé</option>
+              <option value="mariage">Mariage — Film</option>
+              <option value="mariage_photo">Mariage — Photo</option>
+              <option value="marque">Film de marque</option>
+              <option value="doc">Documentaire</option>
+            </select>
+          </div>
+          <div class="mt-4">
+            <label class="lbl">Étapes (une par ligne)</label>
+            <textarea name="steps" class="field" rows="11">Tournage prévu
 Tournage en cours
 Tournage terminé
 Tri des rushs
 Montage
 Finalisation
 Livraison</textarea>
-      </div>
+            <p class="hint">Le client verra ces étapes dans cet ordre. Modifiables à tout moment.</p>
+          </div>
+        </div>
+      </aside>
     </div>
 
-    <p id="createError" class="mt-4 hidden text-sm text-red-400"></p>
-    <div class="mt-6 flex justify-end gap-3">
-      <button type="button" id="createCancel" class="btn-ghost text-sm">Annuler</button>
+    <div class="sheet-foot">
+      <p id="createError" class="hidden flex-1 text-sm text-red-400"></p>
+      <button type="button" id="createCancel" class="btn-ghost ml-auto text-sm">Annuler</button>
       <button type="submit" class="btn-or text-sm">Créer le projet</button>
     </div>
   </form>
@@ -358,6 +384,17 @@ Livraison</textarea>
             <div><label class="lbl">Date de l'événement</label><input id="d_event" type="date" class="field" /></div>
             <div><label class="lbl">Nom du studio</label><input id="d_studio" class="field" /></div>
             <div><label class="lbl">Accroche studio</label><input id="d_tagline" class="field" /></div>
+            <div class="md:col-span-2">
+              <label class="lbl">Appliquer un modèle de workflow</label>
+              <select id="d_preset" class="field" aria-label="Appliquer un modèle de workflow">
+                <option value="">Choisir un modèle…</option>
+                <option value="mariage">Mariage — Film</option>
+                <option value="mariage_photo">Mariage — Photo</option>
+                <option value="marque">Film de marque</option>
+                <option value="doc">Documentaire</option>
+              </select>
+              <p class="hint">Remplace les étapes ci-dessous. Confirmation demandée.</p>
+            </div>
             <div class="md:col-span-2">
               <label class="lbl">Étapes du workflow (une par ligne)</label>
               <textarea id="d_steps" class="field" rows="7"></textarea>
@@ -785,6 +822,21 @@ $("createPreset").addEventListener("change", (e) => {
   if (preset) $("createForm").steps.value = preset.join("\n");
 });
 
+// Même mécanique sur un projet existant, mais avec confirmation : les étapes
+// déjà en place peuvent avoir été personnalisées. L'étape en cours est de toute
+// façon ramenée dans les bornes à l'enregistrement (voir d_saveBtn).
+$("d_preset").addEventListener("change", (e) => {
+  const sel = e.target;
+  const cle = sel.value;
+  const libelle = sel.options[sel.selectedIndex].text;
+  sel.value = "";                        // le select repart sur « Choisir un modèle… »
+  const preset = WORKFLOW_PRESETS[cle];
+  if (!preset) return;
+  if (!confirm(`Remplacer les étapes de ce projet par le modèle « ${libelle} » ?`)) return;
+  $("d_steps").value = preset.join("\n");
+  $("d_infoSect").open = true;           // pour voir le résultat si la section était repliée
+});
+
 $("createForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   $("createError").classList.add("hidden");
@@ -941,6 +993,7 @@ function openDetail(p) {
   loadViews(p.id);
   loadStepHistory(p.id);
   $("d_saveStatus").classList.add("hidden");
+  $("d_preset").value = "";
   // Sur ordinateur il y a la place : on ouvre les informations d'emblée plutôt
   // que d'imposer un clic. Sur mobile on garde le repli pour limiter le défilement.
   $("d_infoSect").open = window.matchMedia("(min-width:900px)").matches;

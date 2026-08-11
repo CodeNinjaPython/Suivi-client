@@ -139,7 +139,10 @@
             position: fixed; z-index: -1; pointer-events: none; opacity: .5;
             color: var(--ink-soft);
         }
-        .doodle-star { top: 6%; left: 4%; width: 34px; color: var(--gold); transform: rotate(-8deg); }
+        /* L'étoile vit dans la MARGE gauche, jamais derrière le contenu :
+           on l'ancre au bord du conteneur (max-width 1120px, centré) au lieu
+           d'un pourcentage de la fenêtre, sinon elle passe sous le nom du studio. */
+        .doodle-star { top: 12%; left: calc(50% - 560px - 54px); width: 34px; color: var(--gold); transform: rotate(-8deg); }
         .doodle-heart { bottom: 8%; right: 5%; width: 40px; color: var(--wine); opacity: .45; transform: rotate(8deg); }
         .doodle-rings { top: 8%; right: 6%; width: 70px; opacity: .4; transform: rotate(-6deg); }
 
@@ -495,6 +498,10 @@
         }
         .state-msg .st-detail { margin-top: 12px; color: var(--muted); font-size: 14px; line-height: 1.6; }
 
+        /* Plus de marge libre à gauche du conteneur → l'étoile n'a plus de place. */
+        @media (max-width: 1280px) {
+            .doodle-star { display: none; }
+        }
         @media (max-width: 640px) {
             .meta-cards { grid-template-columns: 1fr; }
             .doodle-rings { display: none; }
@@ -761,6 +768,12 @@
         // Redirection par style : si ce projet n'est pas en style "mariage", on rend la main à suivi.html
         if (data.style !== "mariage") { location.replace("suivi.html" + location.search); return; }
 
+        // Porte email : uniquement si PERSONNE n'a encore renseigné d'email pour ce
+        // projet. Une fois l'email en base, redemander ne sert à rien (set_client_email
+        // n'écrase jamais un email existant) et oblige le client à ressaisir sur
+        // chaque nouvel appareil. On garde la mémoire locale pour le cas has_email=false.
+        if (!isUnlocked(token) && !data.has_email) { showGate(); return; }
+
         render(data);
         registerView(token);
     }
@@ -794,16 +807,23 @@
         });
     }
 
+    // Cet appareil a-t-il déjà le droit d'entrer sans repasser par la porte ?
+    function isUnlocked(token) {
+        // Admin actif récemment (drapeau posé par admin.html) → jamais de porte pour toi.
+        try {
+            const until = parseInt(localStorage.getItem("sc_admin_until") || "0", 10);
+            if (until > Date.now()) return true;
+        } catch (_) {}
+        try { return !!localStorage.getItem(gateKey(token)); } catch (_) { return false; }
+    }
+
     function boot() {
         const token = new URLSearchParams(location.search).get("p");
         currentToken = token;
         if (!token) { showMessage("Lien invalide", "Ce lien ne contient aucun projet."); return; }
-        let unlocked = false;
-        // Admin actif récemment (drapeau posé par admin.html) → jamais de porte pour toi.
-        try { const until = parseInt(localStorage.getItem("sc_admin_until") || "0", 10); if (until > Date.now()) unlocked = true; } catch (_) {}
-        if (!unlocked) { try { unlocked = !!localStorage.getItem(gateKey(token)); } catch (_) {} }
-        if (unlocked) { loadProject(); return; }
-        showGate();
+        // On charge d'abord : c'est la réponse du serveur (has_email) qui décide
+        // s'il faut afficher la porte, pas seulement la mémoire de l'appareil.
+        loadProject();
     }
 
     // Comptabilise une consultation (une fois par session navigateur, fire-and-forget)

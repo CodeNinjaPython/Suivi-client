@@ -52,7 +52,51 @@
     transition:transform .25s, border-color .25s;
   }
   .btn-ghost:hover { border-color:rgba(244,241,236,.4); transform:translateY(-2px); }
-  dialog::backdrop { background:rgba(7,9,12,.8); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); }
+  /* ---- Fiches modales (création / détail) ---------------------------------
+     Le contenu est long : l'en-tête reste collé en haut pour garder le titre et
+     « Fermer » sous la main, et la barre de défilement est habillée pour ne pas
+     trancher avec le fond sombre. */
+  dialog::backdrop { background:rgba(7,9,12,.85); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+  dialog { box-shadow:0 40px 90px -20px rgba(0,0,0,.75); scrollbar-width:thin; scrollbar-color:rgba(244,241,236,.18) transparent; }
+  dialog::-webkit-scrollbar { width:12px; }
+  dialog::-webkit-scrollbar-track { background:transparent; }
+  dialog::-webkit-scrollbar-thumb { background:rgba(244,241,236,.16); border-radius:999px; border:4px solid #12161d; }
+  dialog::-webkit-scrollbar-thumb:hover { background:rgba(244,241,236,.28); }
+
+  .sheet { padding:0 1.5rem 1.5rem; }
+  .sheet-head {
+    position:sticky; top:0; z-index:5;
+    display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;
+    margin:0 -1.5rem 1.25rem; padding:1.4rem 1.5rem 1rem;
+    background:#12161d; border-bottom:1px solid rgba(244,241,236,.08);
+  }
+  .sheet-close {
+    flex:0 0 auto; width:2.25rem; height:2.25rem; border-radius:999px;
+    display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid rgba(244,241,236,.10); background:transparent; color:#a3a8b2;
+    font-size:1.15rem; line-height:1;
+    transition:border-color .2s, color .2s, background .2s;
+  }
+  .sheet-close:hover { border-color:rgba(244,241,236,.4); color:#f4f1ec; background:rgba(244,241,236,.06); }
+
+  /* Sections dépliables : chevron maison au lieu du triangle du navigateur */
+  .sect { border:1px solid rgba(244,241,236,.08); border-radius:.9rem; background:rgba(14,18,24,.6); }
+  .sect > summary {
+    display:flex; align-items:center; gap:.65rem; list-style:none; cursor:pointer;
+    padding:.9rem 1rem; border-radius:.9rem;
+    font-size:.9rem; font-weight:600; color:#f4f1ec;
+    transition:background .2s;
+  }
+  .sect > summary::-webkit-details-marker { display:none; }
+  .sect > summary::before {
+    content:""; flex:0 0 auto; width:.45rem; height:.45rem;
+    border-right:2px solid #3b9bff; border-bottom:2px solid #3b9bff;
+    transform:rotate(-45deg); transition:transform .2s;
+  }
+  .sect[open] > summary::before { transform:rotate(45deg); }
+  .sect > summary:hover { background:rgba(244,241,236,.03); }
+  .sect-body { padding:0 1rem 1rem; }
+  .hint { margin-top:.35rem; font-size:11px; line-height:1.5; color:#6b7280; }
   .kicker {
     display:inline-flex; align-items:center; gap:.5rem;
     padding:.4rem .75rem; border-radius:999px;
@@ -87,7 +131,37 @@
         <input id="password" type="password" class="field" autocomplete="current-password" required />
       </div>
       <p id="loginError" class="hidden text-sm text-red-400"></p>
+      <p id="resetMsg" class="hidden text-sm text-accent-soft"></p>
       <button type="submit" class="btn-or w-full">Se connecter</button>
+    </form>
+    <p class="mt-5 text-center">
+      <button type="button" id="firstLoginBtn"
+        class="text-sm text-ink-soft underline underline-offset-4 hover:text-accent-soft">
+        Première connexion ou mot de passe oublié&nbsp;?
+      </button>
+    </p>
+  </div>
+</section>
+
+<!-- ============ CRÉATION DU MOT DE PASSE (lien reçu par email) ============ -->
+<!-- Affiché quand on arrive via un lien d'invitation ou de réinitialisation :
+     la session est déjà valide, il ne reste qu'à choisir un mot de passe. -->
+<section id="pwScreen" class="hidden min-h-screen items-center justify-center px-6">
+  <div class="w-full max-w-sm">
+    <span class="kicker mb-6">Accès privé</span>
+    <p class="font-display text-4xl font-bold text-ink">Choisis ton mot de passe</p>
+    <p class="mt-2 mb-8 text-sm text-ink-soft">Il te servira pour toutes tes prochaines connexions.</p>
+    <form id="pwForm" class="space-y-4">
+      <div>
+        <label class="lbl" for="newPass">Nouveau mot de passe</label>
+        <input id="newPass" type="password" class="field" autocomplete="new-password" minlength="8" required />
+      </div>
+      <div>
+        <label class="lbl" for="newPass2">Confirmation</label>
+        <input id="newPass2" type="password" class="field" autocomplete="new-password" minlength="8" required />
+      </div>
+      <p id="pwError" class="hidden text-sm text-red-400"></p>
+      <button type="submit" class="btn-or w-full">Enregistrer et continuer</button>
     </form>
   </div>
 </section>
@@ -139,9 +213,14 @@
 
 <!-- ====================== MODALE : CRÉER UN PROJET ====================== -->
 <dialog id="createDialog" class="w-[calc(100%-1.5rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface p-0 text-ink">
-  <form id="createForm" method="dialog" class="p-6">
-    <p class="font-display text-2xl font-bold text-ink">Nouveau projet</p>
-    <p class="mb-6 text-[11px] uppercase tracking-[0.18em] text-ink-muted">Le lien client est généré automatiquement</p>
+  <form id="createForm" method="dialog" class="sheet">
+    <div class="sheet-head">
+      <div class="min-w-0">
+        <p class="font-display text-2xl font-bold text-ink">Nouveau projet</p>
+        <p class="mt-1 text-[11px] uppercase tracking-[0.18em] text-ink-muted">Le lien client est généré automatiquement</p>
+      </div>
+      <button type="button" id="createClose" class="sheet-close" aria-label="Fermer" title="Fermer">&times;</button>
+    </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div class="sm:col-span-2">
@@ -213,13 +292,13 @@ Livraison</textarea>
 
 <!-- ====================== MODALE : DÉTAIL PROJET ====================== -->
 <dialog id="detailDialog" class="w-[calc(100%-1.5rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface p-0 text-ink">
-  <div class="p-6">
-    <div class="mb-5 flex items-start justify-between">
-      <div>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div class="min-w-0">
         <p id="d_title" class="font-display text-2xl font-bold text-ink">—</p>
-        <p id="d_meta" class="mt-1 font-mono text-xs text-accent-soft"></p>
+        <p id="d_meta" class="mt-1 font-mono text-[11px] leading-relaxed text-accent-soft"></p>
       </div>
-      <button id="detailClose" class="btn-ghost text-sm">Fermer</button>
+      <button id="detailClose" class="sheet-close" type="button" aria-label="Fermer la fiche" title="Fermer">&times;</button>
     </div>
 
     <!-- Avancement -->
@@ -238,16 +317,18 @@ Livraison</textarea>
     </div>
 
     <!-- Historique des étapes (horodaté) -->
-    <details class="mt-4 rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
-      <summary class="cursor-pointer select-none text-sm font-semibold text-ink">Historique des étapes</summary>
-      <div id="d_stepHistory" class="mt-3 max-h-40 space-y-1 overflow-y-auto font-mono text-[11px] text-ink-soft"></div>
+    <details class="sect mt-4">
+      <summary>Historique des étapes</summary>
+      <div class="sect-body">
+        <div id="d_stepHistory" class="max-h-40 space-y-1 overflow-y-auto font-mono text-[11px] text-ink-soft"></div>
+      </div>
     </details>
 
     <!-- Édition complète des informations du projet -->
-    <details class="mt-4 rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
-      <summary class="cursor-pointer select-none text-sm font-semibold text-ink">Informations du projet</summary>
-      <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div class="sm:col-span-2"><label class="lbl">Titre du projet</label><input id="d_title_in" class="field" /><p style="font-size:11px;color:#6b7280;margin-top:4px">Non affiché sur la page Mariage (les prénoms suffisent). Sert au titre des pages Bleu/Or, à l'onglet et au sujet des emails.</p></div>
+    <details class="sect mt-4">
+      <summary>Informations du projet</summary>
+      <div class="sect-body grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="sm:col-span-2"><label class="lbl">Titre du projet</label><input id="d_title_in" class="field" /><p class="hint">Non affiché sur la page Mariage (les prénoms suffisent). Sert au titre des pages Bleu/Or, à l'onglet et au sujet des emails.</p></div>
         <div class="sm:col-span-2"><label class="lbl">Nom du client</label><input id="d_client" class="field" /></div>
         <div class="sm:col-span-2"><label class="lbl">Email du client (notifications)</label><input id="d_email" type="email" class="field" /></div>
         <div><label class="lbl">Type de projet</label><input id="d_type" class="field" /></div>
@@ -311,9 +392,11 @@ Livraison</textarea>
     <div class="mt-6 border-t border-[rgba(244,241,236,0.08)] pt-5">
       <p class="lbl">Lien client</p>
       <p id="d_views" class="mb-2 font-mono text-[11px] text-ink-muted"></p>
-      <details class="mb-3">
-        <summary class="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-ink-muted">Journal des consultations</summary>
-        <div id="d_viewsLog" class="mt-2 max-h-40 space-y-1 overflow-y-auto font-mono text-[11px] text-ink-soft"></div>
+      <details class="sect mb-3">
+        <summary>Journal des consultations</summary>
+        <div class="sect-body">
+          <div id="d_viewsLog" class="max-h-40 space-y-1 overflow-y-auto font-mono text-[11px] text-ink-soft"></div>
+        </div>
       </details>
       <div class="flex gap-2">
         <input id="d_link" class="field font-mono text-xs" readonly />
@@ -344,6 +427,12 @@ const SUPABASE_ANON = "sb_publishable_G4VHv4hDJEHTRrdRFke_2w_r1Ngp7MQ";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true },
 });
+
+// Arrivée depuis un lien reçu par email (invitation ou mot de passe oublié) :
+// supabase-js consomme le fragment d'URL puis l'efface, donc on le lit AVANT
+// que le client ne s'initialise. `recovery` = mot de passe oublié, `invite` =
+// compte créé depuis le dashboard Supabase.
+let mustSetPassword = /type=(recovery|invite)/.test(location.hash || "");
 
 const $ = (id) => document.getElementById(id);
 
@@ -410,7 +499,20 @@ function onActivity() {
 ["click", "keydown", "mousemove", "touchstart", "scroll"].forEach((ev) =>
   addEventListener(ev, onActivity, { passive: true }));
 
+function showPwScreen() {
+  $("loginScreen").classList.add("hidden");
+  $("loginScreen").classList.remove("flex");
+  $("dashboard").classList.add("hidden");
+  $("pwScreen").classList.remove("hidden");
+  $("pwScreen").classList.add("flex");
+}
+
 function applySession(session) {
+  // Session ouverte par un lien email : on impose d'abord le choix du mot de
+  // passe, sinon le compte resterait sans mot de passe connu de son titulaire.
+  if (session && mustSetPassword) { showPwScreen(); return; }
+  $("pwScreen").classList.add("hidden");
+  $("pwScreen").classList.remove("flex");
   if (session) {
     $("loginScreen").classList.add("hidden");
     $("loginScreen").classList.remove("flex");
@@ -453,6 +555,82 @@ $("loginForm").addEventListener("submit", async (e) => {
     $("loginError").textContent = "Problème de réseau. Vérifiez votre connexion et réessayez.";
     $("loginError").classList.remove("hidden");
     console.error(err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = label; btn.style.opacity = ""; }
+  }
+});
+
+// ── Première connexion / mot de passe oublié ────────────────────────────────
+// Envoie un lien par email. Le compte doit exister dans Supabase → Auth → Users ;
+// si ce n'est pas le cas, Supabase répond quand même « ok » sans rien envoyer
+// (protection contre l'énumération de comptes), d'où le message au conditionnel.
+$("firstLoginBtn").addEventListener("click", async () => {
+  const err = $("loginError"), msg = $("resetMsg");
+  err.classList.add("hidden"); msg.classList.add("hidden");
+  const email = $("email").value.trim();
+  if (!email) {
+    err.textContent = "Renseigne d'abord ton email ci-dessus.";
+    err.classList.remove("hidden");
+    $("email").focus();
+    return;
+  }
+  const btn = $("firstLoginBtn"), label = btn.textContent;
+  btn.disabled = true; btn.textContent = "Envoi…"; btn.style.opacity = ".6";
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: location.href.split("#")[0].split("?")[0],
+    });
+    if (error) {
+      err.textContent = "Envoi impossible : " + error.message;
+      err.classList.remove("hidden");
+      return;
+    }
+    msg.textContent = "Si un compte existe pour " + email + ", un lien vient d'être envoyé. Ouvre-le pour choisir ton mot de passe.";
+    msg.classList.remove("hidden");
+  } catch (e) {
+    err.textContent = "Problème de réseau. Vérifiez votre connexion et réessayez.";
+    err.classList.remove("hidden");
+    console.error(e);
+  } finally {
+    btn.disabled = false; btn.textContent = label; btn.style.opacity = "";
+  }
+});
+
+// Enregistrement du mot de passe choisi (la session du lien email est déjà active)
+$("pwForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = $("pwError");
+  err.classList.add("hidden");
+  const p1 = $("newPass").value, p2 = $("newPass2").value;
+  if (p1.length < 8) {
+    err.textContent = "8 caractères minimum.";
+    err.classList.remove("hidden");
+    return;
+  }
+  if (p1 !== p2) {
+    err.textContent = "Les deux mots de passe ne sont pas identiques.";
+    err.classList.remove("hidden");
+    return;
+  }
+  const btn = e.submitter || $("pwForm").querySelector('button[type="submit"]');
+  const label = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = "Enregistrement…"; btn.style.opacity = ".6"; }
+  try {
+    const { error } = await sb.auth.updateUser({ password: p1 });
+    if (error) {
+      err.textContent = "Enregistrement impossible : " + error.message;
+      err.classList.remove("hidden");
+      return;
+    }
+    mustSetPassword = false;
+    // Hors du callback onAuthStateChange, getSession() ne pose pas de problème
+    // de verrou : on récupère la session pour basculer sur le tableau de bord.
+    const { data } = await sb.auth.getSession();
+    applySession(data.session);
+  } catch (e2) {
+    err.textContent = "Problème de réseau. Vérifiez votre connexion et réessayez.";
+    err.classList.remove("hidden");
+    console.error(e2);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = label; btn.style.opacity = ""; }
   }
@@ -744,6 +922,22 @@ function openDetail(p) {
   detailDialog.showModal();
 }
 $("detailClose").addEventListener("click", () => detailDialog.close());
+$("createClose").addEventListener("click", () => createDialog.close());
+
+// Clic dans le vide (le fond assombri) → on ferme. Un clic sur le fond atteint
+// l'élément <dialog> lui-même ; on vérifie en plus les coordonnées pour ne pas
+// fermer quand on attrape la barre de défilement, qui vise la même cible.
+function closeOnBackdrop(dlg) {
+  dlg.addEventListener("click", (e) => {
+    if (e.target !== dlg) return;
+    const r = dlg.getBoundingClientRect();
+    const dedans = e.clientX >= r.left && e.clientX <= r.right
+                && e.clientY >= r.top  && e.clientY <= r.bottom;
+    if (!dedans) dlg.close();
+  });
+}
+closeOnBackdrop(detailDialog);
+closeOnBackdrop(createDialog);
 
 // Avancer / reculer l'étape (horodatage de l'étape atteinte)
 function moveStep(delta) {
@@ -866,7 +1060,11 @@ $("d_qrDownload").addEventListener("click", () => {
    ========================================================================= */
 // La session initiale est émise par onAuthStateChange (événement INITIAL_SESSION) :
 // pas besoin d'appeler getSession() au démarrage (et on évite ainsi tout interblocage).
-sb.auth.onAuthStateChange((_event, session) => applySession(session));
+sb.auth.onAuthStateChange((event, session) => {
+  // supabase-js signale explicitement l'arrivée par lien « mot de passe oublié ».
+  if (event === "PASSWORD_RECOVERY") mustSetPassword = true;
+  applySession(session);
+});
 </script>
 </body>
 </html>

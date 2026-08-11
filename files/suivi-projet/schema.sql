@@ -35,12 +35,21 @@ create table projects (
 -- Sécurité : on active RLS (rien n'est lisible par défaut)
 alter table projects enable row level security;
 
--- Qui est admin ? Un seul email autorisé (défense en profondeur : même si un
+-- Qui est admin ? Liste blanche d'emails (défense en profondeur : même si un
 -- autre compte existe sur ce projet Supabase, il n'accède pas aux données).
--- >>> REMPLACE l'email ci-dessous par celui de TON compte admin Supabase. <<<
+-- >>> METS ICI les emails des comptes admin Supabase. Chaque adresse doit
+--     aussi exister dans Authentication → Users, sinon elle ne sert à rien. <<<
 create or replace function is_admin()
 returns boolean language sql stable set search_path = public as $$
-  select coalesce((auth.jwt() ->> 'email') = 'fvjeremie@gmail.com', false);
+  select coalesce(
+    lower(auth.jwt() ->> 'email') = any (array[
+      'fvjeremie@gmail.com',
+      'contact@jourjstudio.com',
+      'cjeannette821@gmail.com',
+      'jourjjstudio@gmail.com'
+    ]),
+    false
+  );
 $$;
 
 -- Toi (admin) : accès complet à la table projets

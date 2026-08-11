@@ -12,10 +12,20 @@
 --     Editor, qui s'exécute avec les pleins droits.)
 -- =====================================================================
 
--- 1) Qui est admin ? (source unique de l'email autorisé)
+-- 1) Qui est admin ? (source unique des emails autorisés)
+--    Garder cette liste identique à celle de migration-admins-multiples.sql,
+--    sinon rejouer ce fichier écraserait les admins ajoutés depuis.
 create or replace function is_admin()
 returns boolean language sql stable set search_path = public as $$
-  select coalesce((auth.jwt() ->> 'email') = 'fvjeremie@gmail.com', false);
+  select coalesce(
+    lower(auth.jwt() ->> 'email') = any (array[
+      'fvjeremie@gmail.com',
+      'contact@jourjstudio.com',
+      'cjeannette821@gmail.com',
+      'jourjjstudio@gmail.com'
+    ]),
+    false
+  );
 $$;
 
 -- 2) Policies durcies (on remplace les anciennes basées sur auth.role())

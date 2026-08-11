@@ -298,6 +298,12 @@
         // Redirection par style : si ce projet n'est pas en style "studio", on rend la main au style bleu
         if (data.style !== "studio") { location.replace("suivi.html" + location.search); return; }
 
+        // Porte email : uniquement si PERSONNE n'a encore renseigné d'email pour ce
+        // projet. Une fois l'email en base, redemander ne sert à rien (set_client_email
+        // n'écrase jamais un email existant) et oblige le client à ressaisir sur
+        // chaque nouvel appareil. La mémoire locale ne sert plus que si has_email est faux.
+        if (!isUnlocked(token) && !data.has_email) { showGate(); return; }
+
         render(data);
         registerView(token);
     }
@@ -331,16 +337,23 @@
         });
     }
 
+    // Cet appareil a-t-il déjà le droit d'entrer sans repasser par la porte ?
+    function isUnlocked(token) {
+        // Admin actif récemment (drapeau posé par admin.html) → jamais de porte pour toi.
+        try {
+            const until = parseInt(localStorage.getItem("sc_admin_until") || "0", 10);
+            if (until > Date.now()) return true;
+        } catch (_) {}
+        try { return !!localStorage.getItem(gateKey(token)); } catch (_) { return false; }
+    }
+
     function boot() {
         const token = new URLSearchParams(location.search).get("p");
         currentToken = token;
         if (!token) { showMessage("Lien invalide", "Ce lien ne contient aucun projet."); return; }
-        let unlocked = false;
-        // Admin actif récemment (drapeau posé par admin.html) → jamais de porte pour toi.
-        try { const until = parseInt(localStorage.getItem("sc_admin_until") || "0", 10); if (until > Date.now()) unlocked = true; } catch (_) {}
-        if (!unlocked) { try { unlocked = !!localStorage.getItem(gateKey(token)); } catch (_) {} }
-        if (unlocked) { loadProject(); return; }
-        showGate();
+        // On charge d'abord : c'est la réponse du serveur (has_email) qui décide
+        // s'il faut afficher la porte, pas seulement la mémoire de l'appareil.
+        loadProject();
     }
 
     // Comptabilise une consultation (une fois par session navigateur, fire-and-forget)

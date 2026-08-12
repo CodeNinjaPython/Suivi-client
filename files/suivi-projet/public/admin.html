@@ -6,6 +6,11 @@
 <meta name="theme-color" content="#07090c" />
 <title>Administration — Suivi de projet</title>
 
+<!-- Sans ces deux lignes, le navigateur réclame /favicon.ico à chaque chargement
+     et récolte un 404 (les autres pages, elles, les déclarent déjà). -->
+<link rel="icon" type="image/svg+xml" href="logo-prismae.svg" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
 <!-- Client Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- Génération de QR code (dessiné sur canvas → PNG téléchargeable) -->
@@ -846,15 +851,26 @@ function renderList() {
     const stale = !p.delivered && !p.archived && days >= 14;
     const staleBadge = stale ? ` · <span class="text-amber-400">inactif ${days} j</span>` : "";
 
+    // Un projet de style Mariage n'a pas forcément de titre (les prénoms suffisent
+    // sur sa page client) : sa carte affichait alors une ligne vide. Dans ce cas le
+    // nom du client sert de titre, et ne se répète donc pas dans la ligne du dessous.
+    const sansTitre = !(p.project_title || "").trim();
+    const titre = sansTitre ? (p.client_name || "Projet sans titre") : p.project_title;
+    const meta = [
+      sansTitre ? "" : p.client_name,
+      p.project_type,
+      p.event_date ? fmtDate(p.event_date) : "",
+      p.style === "studio" ? "Or" : p.style === "mariage" ? "Mariage" : "Bleu",
+      p.archived ? "Archivé" : "",
+    ].filter(Boolean).map(escHtml).join(" · ") + staleBadge;
+
     const card = document.createElement("button");
     card.className = "block w-full rounded-2xl border border-[rgba(244,241,236,0.08)] bg-surface/70 p-5 text-left transition hover:border-accent" + (p.archived ? " opacity-60" : "");
     card.innerHTML = `
       <div class="flex items-start justify-between gap-4">
         <div>
-          <p class="font-display text-xl font-bold text-ink">${p.project_title}</p>
-          <p class="mt-0.5 font-mono text-xs text-ink-muted">
-            ${p.client_name}${p.project_type ? " · " + p.project_type : ""}${p.event_date ? " · " + fmtDate(p.event_date) : ""} · ${p.style === "studio" ? "Or" : p.style === "mariage" ? "Mariage" : "Bleu"}${p.archived ? " · Archivé" : ""}${staleBadge}
-          </p>
+          <p class="font-display text-xl font-bold text-ink">${escHtml(titre)}</p>
+          <p class="mt-0.5 font-mono text-xs text-ink-muted">${meta}</p>
         </div>
         <span class="shrink-0 rounded-full border ${p.delivered ? 'border-accent text-accent' : 'border-[rgba(244,241,236,0.12)] text-accent-soft'} px-3 py-1 font-mono text-[10px] uppercase tracking-widest">
           ${label}
@@ -984,8 +1000,15 @@ function renderDetailChamps() {
   const p = current;
   const steps = Array.isArray(p.steps) ? p.steps : [];
 
-  $("d_title").textContent = p.project_title;
-  $("d_meta").textContent = [p.client_name, p.project_type, p.event_date ? fmtDate(p.event_date) : ""].filter(Boolean).join("  ·  ");
+  // Même repli que dans la liste : sans titre (cas courant en style Mariage), le
+  // nom du client fait office d'en-tête plutôt que de laisser la ligne vide.
+  const sansTitre = !(p.project_title || "").trim();
+  $("d_title").textContent = sansTitre ? (p.client_name || "Projet sans titre") : p.project_title;
+  $("d_meta").textContent = [
+    sansTitre ? "" : p.client_name,
+    p.project_type,
+    p.event_date ? fmtDate(p.event_date) : "",
+  ].filter(Boolean).join("  ·  ");
 
   // Champs d'édition complète
   $("d_title_in").value = p.project_title || "";

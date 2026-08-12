@@ -10,6 +10,13 @@
 // (Gmail, Apple Mail, Outlook). Les dégradés et border-radius dégradent
 // proprement sur Outlook Windows (couleur pleine, angles droits).
 //
+// Polices : un thème peut déclarer des @font-face (champ `fontFace`). Les fichiers
+// sont servis depuis SITE_URL (Vercel renvoie `access-control-allow-origin: *`, ce
+// que réclament les webviews des clients mail ; le domaine jourjstudio.com, lui,
+// n'envoie pas cet en-tête). Apple Mail / Mail iOS les chargent ; Gmail et Outlook
+// Windows ignorent @font-face → la pile de repli de chaque `font-family` prend le
+// relais, donc elle doit rester présentable seule.
+//
 // Expéditeur sur le domaine vérifié chez Resend (jourjstudio.com)
 // → bonne délivrabilité (SPF/DKIM alignés), pas de spam.
 //
@@ -49,6 +56,9 @@ type Theme = {
   fontHead: string;
   fontBody: string;
   fontLabel: string;     // petites capitales / mono / gravé
+  labelWeight: string;   // graisse des labels (400 si la police n'a qu'un seul gras)
+  labelWordSpacing: string; // chasse de l'espace pour fontLabel ("normal" par défaut)
+  fontFace: string;      // @font-face du thème ({BASE} = SITE_URL), "" = aucune
   headSize: string;
   headWeight: string;
   headSpacing: string;
@@ -93,6 +103,9 @@ const THEMES: Record<string, Theme> = {
     fontHead: "'Syne','Helvetica Neue',Helvetica,Arial,sans-serif",
     fontBody: "'Manrope','Helvetica Neue',Helvetica,Arial,sans-serif",
     fontLabel: "'DM Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace",
+    labelWeight: "700",
+    labelWordSpacing: "normal",
+    fontFace: "",
     headSize: "23px",
     headWeight: "700",
     headSpacing: "-.02em",
@@ -136,6 +149,9 @@ const THEMES: Record<string, Theme> = {
     fontHead: "'Playfair Display',Georgia,'Times New Roman',serif",
     fontBody: "'DM Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace",
     fontLabel: "'DM Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace",
+    labelWeight: "700",
+    labelWordSpacing: "normal",
+    fontFace: "",
     headSize: "26px",
     headWeight: "400",
     headSpacing: "0",
@@ -159,7 +175,8 @@ const THEMES: Record<string, Theme> = {
     logoFile: "icon-192.png",
   },
 
-  // ---- MARIAGE : papier ivoire, or gravé, script / Copperplate
+  // ---- MARIAGE : papier ivoire, or gravé, polices du site jourjstudio.com
+  //      (Open Heart en script, Reem Kufi Ink pour les labels et le bouton)
   mariage: {
     scheme: "light",
     pageBg: "#f4f2ee",
@@ -178,13 +195,21 @@ const THEMES: Record<string, Theme> = {
     footerBg: "#faf8f4",
     fontHead: "Georgia,'Palatino Linotype',Palatino,'Times New Roman',serif",
     fontBody: "-apple-system,'Segoe UI',Helvetica,Arial,sans-serif",
-    fontLabel: "Copperplate,'Copperplate Gothic Light','Palatino Linotype',Georgia,serif",
+    fontLabel: "'Reem Kufi Ink',Copperplate,'Copperplate Gothic Light','Trebuchet MS',Georgia,serif",
+    // Reem Kufi Ink n'existe qu'en 400 : demander 700 déclencherait un faux gras
+    // baveux sur une police à texture. On garde 400 et on joue sur l'interlettrage.
+    labelWeight: "400",
+    // Police dessinée d'abord pour l'arabe : son espace latin fait 0,13 em, contre
+    // 0,25-0,30 em pour une latine. On rattrape la chasse comme sur le site.
+    labelWordSpacing: ".14em",
+    fontFace: `@font-face{font-family:'Open Heart';font-style:normal;font-weight:400;font-display:swap;src:url('{BASE}/assets/fonts/OpenHeart.woff2') format('woff2');}`
+      + `@font-face{font-family:'Reem Kufi Ink';font-style:normal;font-weight:400;font-display:swap;src:url('{BASE}/assets/fonts/ReemKufiInk.woff2') format('woff2');}`,
     headSize: "24px",
     headWeight: "400",
     headSpacing: ".005em",
     labelSpacing: ".22em",
-    brandFont: "'Snell Roundhand','Apple Chancery','Segoe Script',Georgia,serif",
-    brandSize: "26px",
+    brandFont: "'Open Heart','Snell Roundhand','Apple Chancery','Segoe Script',Georgia,serif",
+    brandSize: "30px",
     brandColor: "#2d2418",
     brandSpacing: "0",
     brandTransform: "none",
@@ -211,7 +236,7 @@ function button(t: Theme, href: string, label: string, ghost = false): string {
   const border = ghost ? `border:1px solid ${t.accent};` : "";
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
     <td${ghost ? "" : ` bgcolor="${t.btnBg}"`} style="background-color:${bg};background-image:${bgImg};border-radius:${t.btnRadius};${border}">
-      <a href="${href}" style="display:inline-block;padding:14px 30px;font-family:${t.fontLabel};font-size:${t.btnSize};font-weight:700;letter-spacing:${t.btnSpacing};text-transform:${t.btnTransform};color:${color};text-decoration:none;">${label}</a>
+      <a href="${href}" style="display:inline-block;padding:14px 30px;font-family:${t.fontLabel};font-size:${t.btnSize};font-weight:${t.labelWeight};letter-spacing:${t.btnSpacing};word-spacing:${t.labelWordSpacing};text-transform:${t.btnTransform};color:${color};text-decoration:none;">${label}</a>
     </td>
   </tr></table>`;
 }
@@ -312,9 +337,9 @@ Deno.serve(async (req) => {
   // Pastille (prismae) ou label gravé/mono (studio, mariage) pour l'eyebrow
   const eyebrowHtml = t.eyebrowPill
     ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-        <td bgcolor="#0f2033" style="background-color:rgba(59,155,255,.12);border-radius:999px;padding:7px 14px;font-family:${t.fontLabel};font-size:11px;font-weight:700;letter-spacing:${t.labelSpacing};text-transform:uppercase;color:${t.accentSoft};">${eyebrow}</td>
+        <td bgcolor="#0f2033" style="background-color:rgba(59,155,255,.12);border-radius:999px;padding:7px 14px;font-family:${t.fontLabel};font-size:11px;font-weight:${t.labelWeight};letter-spacing:${t.labelSpacing};word-spacing:${t.labelWordSpacing};text-transform:uppercase;color:${t.accentSoft};">${eyebrow}</td>
       </tr></table>`
-    : `<p style="margin:0;font-family:${t.fontLabel};font-size:11px;font-weight:700;letter-spacing:${t.labelSpacing};text-transform:uppercase;color:${isMariage ? t.accentSoft : t.accent};">${eyebrow}</p>`;
+    : `<p style="margin:0;font-family:${t.fontLabel};font-size:11px;font-weight:${t.labelWeight};letter-spacing:${t.labelSpacing};word-spacing:${t.labelWordSpacing};text-transform:uppercase;color:${isMariage ? t.accentSoft : t.accent};">${eyebrow}</p>`;
 
   const html = `<!DOCTYPE html>
 <html lang="fr">
@@ -324,6 +349,7 @@ Deno.serve(async (req) => {
 <meta name="color-scheme" content="${t.scheme}">
 <meta name="supported-color-schemes" content="${t.scheme}">
 <title>${esc(subject)}</title>
+${t.fontFace ? `<style>${t.fontFace.replaceAll("{BASE}", SITE_URL)}</style>` : ""}
 </head>
 <body style="margin:0;padding:0;background-color:${t.pageBg};">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${preheader}&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;</div>
@@ -344,7 +370,7 @@ Deno.serve(async (req) => {
           ${eyebrowHtml}
           <h1 style="margin:14px 0 0;font-family:${t.fontHead};font-size:${t.headSize};font-weight:${t.headWeight};line-height:1.34;letter-spacing:${t.headSpacing};color:${t.heading};">${heading}</h1>
           ${total > 1 ? `<div style="margin-top:22px;">${progress(t, cur, total, justDelivered)}</div>` : ""}
-          ${p.estimated_delivery && !justDelivered ? `<p style="margin:20px 0 0;font-family:${t.fontBody};font-size:14px;line-height:1.6;color:${t.body};">Livraison estimée&nbsp;: <strong style="font-family:${t.fontLabel};letter-spacing:${isStudio ? ".06em" : "0"};color:${t.heading};">${fmtDate(p.estimated_delivery)}</strong></p>` : ""}
+          ${p.estimated_delivery && !justDelivered ? `<p style="margin:20px 0 0;font-family:${t.fontBody};font-size:14px;line-height:1.6;color:${t.body};">Livraison estimée&nbsp;: <strong style="font-family:${t.fontLabel};letter-spacing:${isStudio ? ".06em" : "0"};word-spacing:${t.labelWordSpacing};color:${t.heading};">${fmtDate(p.estimated_delivery)}</strong></p>` : ""}
         </td></tr>
 
         <!-- Bouton principal -->
@@ -361,7 +387,7 @@ Deno.serve(async (req) => {
 
         <!-- Pied -->
         <tr><td bgcolor="${t.footerBg}" style="padding:20px 32px;background-color:${t.footerBg};border-top:1px solid ${t.rule};">
-          <p style="margin:0;font-family:${t.fontLabel};font-size:${isMariage ? "10px" : "11px"};letter-spacing:${t.labelSpacing};text-transform:uppercase;color:${t.muted};">${studio} &middot; Production vidéo &amp; photo &middot; La Réunion</p>
+          <p style="margin:0;font-family:${t.fontLabel};font-size:${isMariage ? "10px" : "11px"};letter-spacing:${t.labelSpacing};word-spacing:${t.labelWordSpacing};text-transform:uppercase;color:${t.muted};">${studio} &middot; Production vidéo &amp; photo &middot; La Réunion</p>
         </td></tr>
       </table>
     </td></tr>

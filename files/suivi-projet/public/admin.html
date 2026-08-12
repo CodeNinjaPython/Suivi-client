@@ -122,6 +122,38 @@
     content:""; width:6px; height:6px; border-radius:50%;
     background:#3b9bff; box-shadow:0 0 8px #3b9bff;
   }
+
+  /* ---- Visite guidée -------------------------------------------------------
+     C'est un <dialog> modal, seul moyen de passer AU-DESSUS des fiches (elles
+     aussi modales, donc en couche supérieure : aucun z-index n'y suffirait).
+     Le fond sombre n'est pas le backdrop mais l'ombre portée de l'anneau : elle
+     couvre tout l'écran sauf le rectangle visé, ce qui fait le projecteur. */
+  #tourDialog {
+    width:100%; height:100%; max-width:none; max-height:none;
+    margin:0; padding:0; border:0; background:transparent;
+    overflow:visible; box-shadow:none;
+  }
+  #tourDialog::backdrop { background:transparent; -webkit-backdrop-filter:none; backdrop-filter:none; }
+  #tourRing {
+    position:fixed; top:50%; left:50%; width:0; height:0;
+    border-radius:16px; pointer-events:none;
+    box-shadow:0 0 0 9999px rgba(7,9,12,.88), 0 0 0 2px #3b9bff, 0 0 30px rgba(59,155,255,.45);
+    transition:top .3s cubic-bezier(.2,.6,.2,1), left .3s cubic-bezier(.2,.6,.2,1),
+               width .3s cubic-bezier(.2,.6,.2,1), height .3s cubic-bezier(.2,.6,.2,1);
+  }
+  /* Étape sans cible (accueil, fin) : plus d'anneau, juste l'écran assombri. */
+  #tourRing.is-blank { box-shadow:0 0 0 9999px rgba(7,9,12,.88); }
+  /* Opacité à 0 tant que la carte n'est pas positionnée : sa place se calcule
+     après le rendu du texte, on évite ainsi de la voir sauter. */
+  #tourCard {
+    position:fixed; top:50%; left:50%; opacity:0;
+    width:min(23rem, calc(100vw - 2rem));
+    border-radius:1rem; padding:1.35rem;
+    background:#12161d; border:1px solid rgba(244,241,236,.12);
+    box-shadow:0 30px 70px -20px rgba(0,0,0,.85);
+    transition:opacity .2s;
+  }
+  @media (prefers-reduced-motion: reduce) { #tourRing, #tourCard { transition:none; } }
 </style>
     <link rel="stylesheet" href="fonts.css" />
     <link rel="stylesheet" href="styles.css" />
@@ -189,9 +221,10 @@
         <p class="font-display text-2xl font-bold leading-none text-ink">Administration</p>
         <p class="mt-1.5 text-[10px] uppercase tracking-[0.22em] text-ink-muted">Suivi de projet client</p>
       </div>
-      <div class="flex flex-wrap items-center gap-3">
+      <div id="headerActions" class="flex flex-wrap items-center gap-3">
         <button id="newProjectBtn" type="button" class="btn-or text-sm">+ Nouveau projet</button>
         <button id="exportBtn" type="button" class="btn-ghost text-sm">Export CSV</button>
+        <button id="tourBtn" type="button" class="btn-ghost text-sm">Visite guidée</button>
         <button id="logoutBtn" type="button" class="btn-ghost text-sm">Déconnexion</button>
       </div>
     </div>
@@ -206,7 +239,7 @@
         <h2 class="font-display text-xl font-bold text-accent-soft">Projets</h2>
         <span id="projectCount" class="font-mono text-xs text-ink-muted"></span>
       </div>
-      <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div id="filterBar" class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
         <input id="searchInput" type="search" class="field sm:flex-1" placeholder="Rechercher un client, un projet…" />
         <select id="sortSelect" class="field sm:w-44" aria-label="Trier les projets">
           <option value="recent">Plus récents</option>
@@ -348,7 +381,7 @@ Livraison</textarea>
 
       <div class="sheet-col">
         <!-- Avancement -->
-        <div class="rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
+        <div id="d_progressBlock" class="rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
           <div class="flex items-center justify-between gap-4">
             <div class="min-w-0">
               <p class="text-[10px] uppercase tracking-[0.18em] text-ink-muted">Étape en cours</p>
@@ -403,14 +436,14 @@ Livraison</textarea>
         </details>
 
         <!-- Note client -->
-        <div>
+        <div id="d_noteBlock">
           <label class="lbl">Le mot de l'équipe (visible par le client)</label>
           <textarea id="d_note" class="field" rows="3" placeholder="Optionnel…"></textarea>
         </div>
 
         <!-- Livraison : la date prévisionnelle et la livraison effective sont le
              même sujet, regroupées dans un seul bloc. -->
-        <div class="rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
+        <div id="d_deliveryBlock" class="rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
           <p class="mb-3 text-[10px] uppercase tracking-[0.18em] text-ink-muted">Livraison</p>
           <div>
             <label class="lbl">Livraison estimée (optionnel)</label>
@@ -429,7 +462,7 @@ Livraison</textarea>
 
       <!-- Colonne de droite : ce qu'on transmet au client + les traces -->
       <aside class="sheet-col">
-        <div class="rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
+        <div id="d_shareBlock" class="rounded-xl border border-[rgba(244,241,236,0.08)] bg-bg-soft/60 p-4">
           <p class="lbl">Lien client</p>
           <p id="d_views" class="mb-3 font-mono text-[11px] text-ink-muted"></p>
           <div class="flex gap-2">
@@ -445,7 +478,7 @@ Livraison</textarea>
           </div>
         </div>
 
-        <details class="sect">
+        <details class="sect" id="d_histSect">
           <summary>Historique des étapes</summary>
           <div class="sect-body">
             <div id="d_stepHistory" class="max-h-56 space-y-1 overflow-y-auto font-mono text-[11px] text-ink-soft"></div>
@@ -468,6 +501,25 @@ Livraison</textarea>
       <button id="d_duplicateBtn" type="button" class="btn-ghost text-sm">Dupliquer</button>
       <p id="d_saveStatus" class="hidden flex-1 text-sm text-accent"></p>
       <button id="d_saveBtn" type="button" class="btn-or ml-auto text-sm">Enregistrer</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ====================== VISITE GUIDÉE ====================== -->
+<!-- Lancée toute seule à la première connexion d'un compte, et relançable par le
+     bouton « Visite guidée ». Voir le bloc VISITE GUIDÉE dans le script. -->
+<dialog id="tourDialog" aria-label="Visite guidée de la console">
+  <div id="tourRing" class="is-blank" aria-hidden="true"></div>
+  <div id="tourCard">
+    <span class="kicker">Visite guidée</span>
+    <p id="tourTitle" class="mt-4 font-display text-xl font-bold text-ink" aria-live="polite"></p>
+    <p id="tourText" class="mt-2 text-sm leading-relaxed text-ink-soft"></p>
+    <div class="mt-6 flex items-center gap-2">
+      <span id="tourProgress" class="font-mono text-[11px] text-ink-muted"></span>
+      <button id="tourSkip" type="button"
+        class="ml-auto text-xs text-ink-muted underline underline-offset-4 hover:text-ink">Passer</button>
+      <button id="tourPrev" type="button" class="btn-ghost px-4 py-2 text-sm">Retour</button>
+      <button id="tourNext" type="button" class="btn-or px-4 py-2 text-sm">Suivant</button>
     </div>
   </div>
 </dialog>
@@ -566,6 +618,10 @@ function showPwScreen() {
   $("pwScreen").classList.add("flex");
 }
 
+// Titulaire de la session : sert à ne proposer la visite guidée qu'une fois par
+// compte, même quand deux personnes partagent le même navigateur.
+let currentUser = null;
+
 function applySession(session) {
   // Session ouverte par un lien email : on impose d'abord le choix du mot de
   // passe, sinon le compte resterait sans mot de passe connu de son titulaire.
@@ -573,15 +629,19 @@ function applySession(session) {
   $("pwScreen").classList.add("hidden");
   $("pwScreen").classList.remove("flex");
   if (session) {
+    currentUser = session.user || null;
     $("loginScreen").classList.add("hidden");
     $("loginScreen").classList.remove("flex");
     $("dashboard").classList.remove("hidden");
-    loadProjects();
+    // La visite guidée attend les projets : elle ouvre une vraie fiche en exemple.
+    loadProjects().then(maybeAutoTour);
     setAdminFlag();
     armIdle();               // démarre le minuteur d'inactivité
   } else {
     if (idleTimer) clearTimeout(idleTimer);
     clearAdminFlag();
+    currentUser = null;
+    tourChecked = false;     // le compte suivant aura droit à sa propre visite
     $("dashboard").classList.add("hidden");
     $("loginScreen").classList.remove("hidden");
     $("loginScreen").classList.add("flex");
@@ -1132,6 +1192,283 @@ $("d_qrDownload").addEventListener("click", () => {
   link.href = $("d_qr").toDataURL("image/png");
   link.click();
 });
+
+/* =========================================================================
+   VISITE GUIDÉE
+   Se lance seule à la première connexion d'un compte (drapeau localStorage par
+   utilisateur : Jérémie et Jeannette peuvent partager le même navigateur), et se
+   relance à la demande par le bouton « Visite guidée ».
+
+   Le projecteur : #tourRing est un rectangle vide posé sur l'élément visé, dont
+   l'ombre portée de 9999px assombrit tout le reste de l'écran. Pas de masque SVG,
+   pas de trou à découper. Et comme la visite entre dans la fiche projet, qui est
+   une <dialog> modale (couche supérieure du navigateur), la visite doit être elle
+   aussi une <dialog> modale, ouverte APRÈS la fiche pour passer devant.
+   ========================================================================= */
+const tourDlg = $("tourDialog"), tourRing = $("tourRing"), tourCard = $("tourCard");
+let tourSteps = [], tourIdx = 0, tourTargetEl = null;
+let tourOpenedDetail = false;   // la fiche a-t-elle été ouverte PAR la visite ?
+let tourDemo = null;            // projet servant d'exemple pour les étapes de la fiche
+let tourChecked = false;        // premier lancement déjà arbitré pour cette session
+
+function tourFlagKey() {
+  return "sc_tour_vu_" + ((currentUser && (currentUser.id || currentUser.email)) || "anon");
+}
+function tourAlreadySeen() {
+  try { return localStorage.getItem(tourFlagKey()) === "1"; } catch (_) { return false; }
+}
+function markTourSeen() {
+  try { localStorage.setItem(tourFlagKey(), "1"); } catch (_) {}
+}
+
+// Les étapes de la fiche n'ont de sens que s'il existe un projet à ouvrir : la
+// liste est donc construite au lancement, pas une fois pour toutes.
+function buildTourSteps() {
+  const demo = allProjects.find((p) => !p.archived) || allProjects[0] || null;
+  tourDemo = demo;
+  const steps = [
+    {
+      title: "Bienvenue dans la console",
+      text: "C'est ici que vivent tous les projets clients : tu fais avancer les étapes, "
+          + "et le client suit l'avancement depuis son lien personnel. La visite prend une minute, "
+          + "et tu peux la relancer quand tu veux avec le bouton « Visite guidée ».",
+    },
+    {
+      el: () => $("statsBar"),
+      title: "Les chiffres du studio",
+      text: "Les projets en cours, ceux qui sont livrés, ceux livrés ce mois-ci et les archivés. "
+          + "Ces compteurs portent sur tous les projets, même ceux que la recherche masque en dessous.",
+    },
+    {
+      el: () => $("filterBar"),
+      title: "Retrouver un projet",
+      text: "La recherche fouille le nom du client, le titre et le type de projet. Le tri change "
+          + "l'ordre de la liste. La case « Archives » remplace la liste par les projets rangés.",
+    },
+    demo ? {
+      el: () => $("projectList").firstElementChild,
+      title: "Une carte par projet",
+      text: "Le titre, le client, le style de sa page et l'étape en cours. La barre du bas montre "
+          + "l'avancement d'un coup d'oeil, et un projet sans mise à jour depuis 14 jours affiche "
+          + "un badge « inactif ». Un clic sur la carte ouvre sa fiche.",
+    } : {
+      el: () => $("emptyState"),
+      title: "La liste des projets",
+      text: "Elle est encore vide. Chaque projet créé apparaîtra ici sous forme de carte, "
+          + "avec son étape en cours et sa barre d'avancement.",
+    },
+    {
+      el: () => $("newProjectBtn"),
+      title: "Créer un projet",
+      text: "Tu renseignes le client et le projet, tu choisis un modèle de workflow (mariage film "
+          + "ou photo, film de marque, documentaire) et le lien client est généré tout seul.",
+    },
+    {
+      el: () => $("headerActions"),
+      title: "Export et déconnexion",
+      text: "« Export CSV » télécharge tous les projets dans un tableur. Côté sécurité, la session "
+          + "se ferme seule après 30 minutes sans activité, et à la fermeture du navigateur.",
+    },
+  ];
+
+  if (!demo) {
+    steps.push({
+      title: "À toi de jouer",
+      text: "Crée un premier projet, puis relance la visite : elle te fera visiter la fiche projet, "
+          + "là où se passe l'essentiel du travail.",
+    });
+    return steps;
+  }
+
+  // Le reste de la visite se passe dans la fiche, ouverte en lecture : rien n'est
+  // enregistré, et elle sera refermée à la fin de la visite.
+  steps.push(
+    {
+      inDetail: true,
+      el: () => $("d_progressBlock"),
+      title: "La fiche projet",
+      text: "On ouvre « " + (demo.project_title || demo.client_name || "un projet") + " » pour l'exemple, "
+          + "rien ne sera modifié. « Étape suivante » fait avancer le projet et date l'étape atteinte. "
+          + "C'est ce geste qui prévient le client par email.",
+    },
+    {
+      inDetail: true,
+      el: () => $("d_style"),
+      title: "Le style de la page client",
+      text: "Bleu, Or ou Ivoire Mariage. Il décide de la page que le client découvre en ouvrant son "
+          + "lien, et de l'habillage de ses emails.",
+    },
+    {
+      inDetail: true,
+      el: () => $("d_infoSect"),
+      title: "Les informations du projet",
+      text: "Le client, les dates, le studio, et surtout les étapes du workflow : une par ligne, "
+          + "dans l'ordre que le client verra. Un modèle peut les remplacer d'un coup.",
+    },
+    {
+      inDetail: true,
+      el: () => $("d_noteBlock"),
+      title: "Le mot de l'équipe",
+      text: "Un message libre affiché sur la page du client. Idéal pour expliquer un décalage "
+          + "ou annoncer une bonne nouvelle.",
+    },
+    {
+      inDetail: true,
+      el: () => $("d_deliveryBlock"),
+      title: "La livraison",
+      text: "La date estimée s'affiche chez le client. Cocher « livré » avec le lien de livraison "
+          + "débloque son bouton de téléchargement et déclenche l'email de livraison.",
+    },
+    {
+      inDetail: true,
+      el: () => $("d_shareBlock"),
+      title: "Le lien et le QR code",
+      text: "C'est ce que reçoit le client : le lien à copier, ou le QR code à imprimer et à lui "
+          + "remettre en fin de tournage. « Ouvrir la page client » montre exactement ce qu'il voit.",
+    },
+    {
+      inDetail: true,
+      el: () => $("d_histSect"),
+      title: "L'historique",
+      text: "Qui a fait avancer quoi et quand. Juste en dessous, le journal des consultations dit "
+          + "si le client a ouvert son lien, et quand.",
+    },
+    {
+      inDetail: true,
+      el: () => $("d_saveBtn"),
+      title: "Toujours enregistrer",
+      text: "Rien de ce que tu modifies dans la fiche n'est envoyé tant que tu n'as pas cliqué sur "
+          + "« Enregistrer ». Y compris un changement d'étape.",
+    },
+    {
+      title: "C'est tout",
+      text: "Tu connais l'essentiel. Le bouton « Visite guidée » en haut de la page relance ce tour "
+          + "quand tu veux, et rien de ce que tu viens de voir n'a été modifié.",
+    },
+  );
+  return steps;
+}
+
+// Place l'anneau sur la cible, puis la carte au-dessous (ou au-dessus si le bas
+// manque de place), toujours ramenée dans l'écran.
+function tourPlace() {
+  const marge = 8, ecart = 16;
+  let r = null;
+  if (tourTargetEl && tourTargetEl.isConnected) {
+    const b = tourTargetEl.getBoundingClientRect();
+    if (b.width > 0 && b.height > 0) r = b;
+  }
+  tourRing.classList.toggle("is-blank", !r);
+  if (r) {
+    tourRing.style.top    = (r.top - marge) + "px";
+    tourRing.style.left   = (r.left - marge) + "px";
+    tourRing.style.width  = (r.width + marge * 2) + "px";
+    tourRing.style.height = (r.height + marge * 2) + "px";
+  } else {
+    tourRing.style.top = "50%"; tourRing.style.left = "50%";
+    tourRing.style.width = "0px"; tourRing.style.height = "0px";
+  }
+
+  const cw = tourCard.offsetWidth, ch = tourCard.offsetHeight;
+  // Carte pas encore mise en page (dialogue fermé une fraction de seconde le temps
+  // de passer au-dessus de la fiche) : sans largeur, le recadrage dans l'écran
+  // placerait la carte hors champ. On n'écrit rien et on réessaie à la frame suivante.
+  if (!cw || !ch) {
+    if (tourDlg.open) requestAnimationFrame(() => tourPlace());
+    return;
+  }
+  let top, left;
+  if (r) {
+    const dessous = r.bottom + ecart, dessus = r.top - ecart - ch;
+    top  = (dessous + ch <= innerHeight - marge) ? dessous
+         : (dessus >= marge ? dessus : (innerHeight - ch) / 2);
+    left = r.left + r.width / 2 - cw / 2;
+  } else {
+    top = (innerHeight - ch) / 2;
+    left = (innerWidth - cw) / 2;
+  }
+  tourCard.style.top  = Math.min(Math.max(marge, top),  Math.max(marge, innerHeight - ch - marge)) + "px";
+  tourCard.style.left = Math.min(Math.max(marge, left), Math.max(marge, innerWidth  - cw - marge)) + "px";
+}
+const tourReflow = () => tourPlace();
+
+function tourShow(i) {
+  const step = tourSteps[i];
+  if (!step) { tourEnd(); return; }
+  tourIdx = i;
+
+  // La fiche s'ouvre/se ferme AVANT le placement, et suit l'étape dans les deux
+  // sens : « Retour » vers une étape du tableau de bord la referme, sinon on
+  // éclairerait un élément caché derrière elle. Rouvrir la visite APRÈS la fiche
+  // est indispensable : la dernière modale ouverte est celle qui passe devant.
+  if (step.inDetail && !detailDialog.open && tourDemo) {
+    tourDlg.close();
+    openDetail(tourDemo);
+    tourOpenedDetail = true;
+    tourDlg.showModal();
+  } else if (!step.inDetail && detailDialog.open && tourOpenedDetail) {
+    detailDialog.close();
+    tourOpenedDetail = false;
+  }
+
+  $("tourTitle").textContent = step.title;
+  $("tourText").textContent  = step.text;
+  $("tourProgress").textContent = (i + 1) + " / " + tourSteps.length;
+  $("tourPrev").classList.toggle("hidden", i === 0);
+  $("tourNext").textContent = (i === tourSteps.length - 1) ? "Terminer" : "Suivant";
+
+  tourTargetEl = step.el ? step.el() : null;
+  // Défilement instantané : on mesure la position juste après, un défilement animé
+  // donnerait une mesure fausse.
+  if (tourTargetEl) tourTargetEl.scrollIntoView({ block: "center", inline: "nearest" });
+  // L'affichage ne dépend pas de la réussite du placement : une carte mal placée
+  // se rattrape à la frame suivante, une carte invisible ne se rattrape jamais.
+  requestAnimationFrame(() => {
+    tourPlace();
+    tourCard.style.opacity = "1";
+    $("tourNext").focus();
+  });
+}
+
+function tourStart() {
+  tourSteps = buildTourSteps();
+  tourOpenedDetail = false;
+  tourCard.style.opacity = "0";
+  if (!tourDlg.open) tourDlg.showModal();
+  addEventListener("resize", tourReflow);
+  addEventListener("scroll", tourReflow, true);
+  tourShow(0);
+}
+
+function tourEnd() {
+  removeEventListener("resize", tourReflow);
+  removeEventListener("scroll", tourReflow, true);
+  if (tourDlg.open) tourDlg.close();
+  // La fiche n'a servi que d'exemple : on la referme sans rien enregistrer.
+  if (tourOpenedDetail && detailDialog.open) detailDialog.close();
+  tourOpenedDetail = false;
+  tourTargetEl = null;
+  markTourSeen();
+}
+
+$("tourNext").addEventListener("click", () => tourShow(tourIdx + 1));
+$("tourPrev").addEventListener("click", () => tourShow(Math.max(0, tourIdx - 1)));
+$("tourSkip").addEventListener("click", tourEnd);
+$("tourBtn").addEventListener("click", tourStart);
+// Échap ferme la visite (l'événement « cancel » ne se déclenche pas sur un close()
+// programmé, donc la réouverture au-dessus de la fiche ne la termine pas par erreur).
+tourDlg.addEventListener("cancel", (e) => { e.preventDefault(); tourEnd(); });
+tourDlg.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight") { e.preventDefault(); tourShow(tourIdx + 1); }
+  if (e.key === "ArrowLeft" && tourIdx > 0) { e.preventDefault(); tourShow(tourIdx - 1); }
+});
+
+// Premier lancement : une seule fois par compte et par navigateur.
+function maybeAutoTour() {
+  if (tourChecked) return;
+  tourChecked = true;
+  if (!tourAlreadySeen()) tourStart();
+}
 
 /* =========================================================================
    DÉMARRAGE

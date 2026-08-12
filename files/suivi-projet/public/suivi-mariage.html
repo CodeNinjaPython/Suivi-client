@@ -704,7 +704,10 @@
         // (les prénoms sont déjà le titre-foyer plus haut : pas de carte "Mariés" en doublon)
         if (p.project_type)        cards.push(["Type de projet", p.project_type, false]);
         if (p.event_date)          cards.push(["Date du mariage", fmtDate(p.event_date), false]);
-        if (!p.delivered && p.estimated_delivery) cards.push(["Livraison estimée", fmtDate(p.estimated_delivery), true]);
+        // Date de livraison renseignée mais masquée au client : interrupteur dans
+        // l'admin. `!== false` = si la base ignore la colonne, on affiche comme avant.
+        if (!p.delivered && p.estimated_delivery && p.show_estimated_delivery !== false)
+          cards.push(["Livraison estimée", fmtDate(p.estimated_delivery), true]);
         document.getElementById("metaCards").innerHTML = cards.map(([l, v, gold]) => `
             <div class="meta-card">
                 <span class="label">${l}</span>

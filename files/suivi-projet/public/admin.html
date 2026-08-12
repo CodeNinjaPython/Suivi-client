@@ -463,6 +463,11 @@ Livraison</textarea>
           <div>
             <label class="lbl">Livraison estimée (optionnel)</label>
             <input id="d_estimated" type="date" class="field" />
+            <label id="d_showEstimatedRow" class="mt-2 flex items-center gap-3">
+              <input id="d_showEstimated" type="checkbox" class="h-4 w-4 accent-[#3b9bff]" />
+              <span class="text-sm">Montrer cette date au client</span>
+            </label>
+            <p id="d_estimatedHint" class="mt-1 text-xs text-ink-muted"></p>
           </div>
           <label class="mt-4 flex items-center gap-3">
             <input id="d_delivered" type="checkbox" class="h-4 w-4 accent-[#3b9bff]" />
@@ -1023,6 +1028,10 @@ function renderDetailChamps() {
   $("d_style").value = p.style || "prismae";
   $("d_note").value = p.client_note || "";
   $("d_estimated").value = p.estimated_delivery || "";
+  // La date peut rester enregistrée sans être montrée au client : par défaut
+  // (et pour tous les projets d'avant cette option), elle est montrée.
+  $("d_showEstimated").checked = p.show_estimated_delivery !== false;
+  refreshEstimatedHint();
   $("d_delivered").checked = !!p.delivered;
   $("d_deliveryUrl").value = p.delivery_url || "";
   $("d_archiveBtn").textContent = p.archived ? "Désarchiver" : "Archiver";
@@ -1062,16 +1071,37 @@ function refreshSaveLabel() {
 $("d_delivered").addEventListener("change", refreshSaveLabel);
 $("d_email").addEventListener("input", refreshSaveLabel);
 
+// Le bloc « livraison estimée » dit lui-même ce que le client verra, pour qu'on
+// n'ait pas à deviner l'effet de la case.
+function refreshEstimatedHint() {
+  // Tant que la migration « livraison-affichage » n'est pas passée en base, la
+  // colonne n'existe pas : on cache la case plutôt que d'offrir un réglage qui
+  // ne serait pas enregistré.
+  const colonneAbsente = !!current && !("show_estimated_delivery" in current);
+  $("d_showEstimatedRow").classList.toggle("hidden", colonneAbsente);
+  const date = $("d_estimated").value;
+  $("d_estimatedHint").textContent =
+    colonneAbsente ? "Cette date est visible par le client dès qu'elle est renseignée."
+    : !date        ? "Aucune date renseignée : le client ne voit rien à ce sujet."
+    : $("d_showEstimated").checked
+                   ? "Le client voit cette date sur sa page de suivi et dans ses emails."
+                   : "Date gardée pour vous seul : le client ne la voit pas.";
+}
+$("d_estimated").addEventListener("input", refreshEstimatedHint);
+$("d_showEstimated").addEventListener("change", refreshEstimatedHint);
+
 // Export CSV de tous les projets (compatible Excel : BOM + séparateurs)
 function csvCell(v) { return '"' + (v == null ? "" : String(v)).replace(/"/g, '""') + '"'; }
 $("exportBtn").addEventListener("click", () => {
-  const header = ["Titre","Client","Email","Type","Date évènement","Étape","Livré","Livraison estimée","Style","Archivé","Vues","Dernière vue","Lien client","Créé le"];
+  const header = ["Titre","Client","Email","Type","Date évènement","Étape","Livré","Livraison estimée","Date montrée au client","Style","Archivé","Vues","Dernière vue","Lien client","Créé le"];
   const rows = allProjects.map((p) => {
     const steps = Array.isArray(p.steps) ? p.steps : [];
     const stepName = p.delivered ? "Livré" : (steps[Math.min(p.current_step, steps.length - 1)] || "");
     return [
       p.project_title, p.client_name, p.client_email, p.project_type, p.event_date,
-      stepName, p.delivered ? "oui" : "non", p.estimated_delivery, p.style,
+      stepName, p.delivered ? "oui" : "non", p.estimated_delivery,
+      p.estimated_delivery ? (p.show_estimated_delivery !== false ? "oui" : "non") : "",
+      p.style,
       p.archived ? "oui" : "non", p.view_count ?? 0, p.last_viewed_at,
       clientLink(p.public_token), p.created_at,
     ].map(csvCell).join(",");
@@ -1196,6 +1226,10 @@ $("d_saveBtn").addEventListener("click", async () => {
     delivery_url:  $("d_deliveryUrl").value.trim() || null,
     updated_at:    new Date().toISOString(),
   };
+  // Idem : n'envoyer la colonne que si la base la connaît, sinon TOUS les
+  // enregistrements échoueraient sur une base où la migration n'est pas passée.
+  if ("show_estimated_delivery" in current)
+    patch.show_estimated_delivery = $("d_showEstimated").checked;
   // Ce que cet enregistrement va déclencher, calculé AVANT d'écrire en base.
   const notice = pendingNotice();
 

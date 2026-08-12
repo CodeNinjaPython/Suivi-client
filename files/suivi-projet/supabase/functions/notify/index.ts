@@ -306,6 +306,11 @@ Deno.serve(async (req) => {
   const cur = Math.min(p.current_step ?? 0, Math.max(total - 1, 0));
   const stepName = esc(steps[cur] || "");
 
+  // La date de livraison estimée peut être renseignée sans être montrée au client
+  // (interrupteur dans l'admin). `!== false` : une base qui ignore encore la
+  // colonne garde l'ancien comportement, la date est annoncée.
+  const montrerLivraison = !!p.estimated_delivery && p.show_estimated_delivery !== false;
+
   // Le thème de l'email suit le style de la page client du projet.
   const style = p.style === "studio" || p.style === "mariage" ? p.style : "prismae";
   const t = THEMES[style];
@@ -377,7 +382,7 @@ ${t.fontFace ? `<style>${t.fontFace.replaceAll("{BASE}", SITE_URL)}</style>` : "
           ${eyebrowHtml}
           <h1 style="margin:14px 0 0;font-family:${t.fontHead};font-size:${t.headSize};font-weight:${t.headWeight};line-height:1.34;letter-spacing:${t.headSpacing};color:${t.heading};">${heading}</h1>
           ${total > 1 ? `<div style="margin-top:22px;">${progress(t, cur, total, justDelivered)}</div>` : ""}
-          ${p.estimated_delivery && !justDelivered ? `<p style="margin:20px 0 0;font-family:${t.fontBody};font-size:14px;line-height:1.6;color:${t.body};">Livraison estimée&nbsp;: <strong style="font-family:${t.fontLabel};letter-spacing:${isStudio ? ".06em" : "0"};word-spacing:${t.labelWordSpacing};color:${t.heading};">${fmtDate(p.estimated_delivery)}</strong></p>` : ""}
+          ${montrerLivraison && !justDelivered ? `<p style="margin:20px 0 0;font-family:${t.fontBody};font-size:14px;line-height:1.6;color:${t.body};">Livraison estimée&nbsp;: <strong style="font-family:${t.fontLabel};letter-spacing:${isStudio ? ".06em" : "0"};word-spacing:${t.labelWordSpacing};color:${t.heading};">${fmtDate(p.estimated_delivery)}</strong></p>` : ""}
         </td></tr>
 
         <!-- Bouton principal -->

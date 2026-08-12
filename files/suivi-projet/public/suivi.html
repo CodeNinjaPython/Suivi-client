@@ -363,7 +363,11 @@ function render(p) {
   // Prochaine étape + livraison estimée (honnête : on n'affiche que ce qu'on sait)
   const infoBits = [];
   if (!p.delivered && cur < last) infoBits.push("Prochaine étape : " + p.steps[cur + 1]);
-  if (!p.delivered && p.estimated_delivery) infoBits.push("Livraison estimée " + fmtDate(p.estimated_delivery));
+  // La date de livraison peut être renseignée sans être montrée au client
+  // (interrupteur dans l'admin). `!== false` : si la base ne connaît pas encore
+  // la colonne, on garde l'ancien comportement, on affiche.
+  if (!p.delivered && p.estimated_delivery && p.show_estimated_delivery !== false)
+    infoBits.push("Livraison estimée " + fmtDate(p.estimated_delivery));
   document.getElementById("nextStepRow").textContent = infoBits.join("   ·   ");
 
   const ol = document.getElementById("track");

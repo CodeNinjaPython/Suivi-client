@@ -24,6 +24,7 @@ create table projects (
   delivered     boolean not null default false,
   delivery_url  text,
   estimated_delivery date,                -- date de livraison estimée (optionnelle)
+  show_estimated_delivery boolean not null default true,  -- la montre-t-on au client ?
   style         text not null default 'prismae',  -- 'prismae' (bleu), 'studio' (or) ou 'mariage' (ivoire/or)
   archived      boolean not null default false,    -- projet archivé (masqué de la liste active)
   view_count    int not null default 0,            -- nb de consultations du lien client
@@ -69,6 +70,7 @@ returns json language sql security definer set search_path = public as $$
     'steps', steps, 'current_step', current_step, 'step_dates', step_dates,
     'client_note', client_note, 'delivered', delivered, 'delivery_url', delivery_url,
     'estimated_delivery', estimated_delivery, 'style', style,
+    'show_estimated_delivery', show_estimated_delivery,
     'has_email', (client_email is not null)        -- l'email est-il déjà renseigné ? (sans l'exposer)
   )
   from projects where public_token = token;

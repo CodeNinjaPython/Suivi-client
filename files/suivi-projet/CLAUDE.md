@@ -93,7 +93,8 @@ Table `projects` :
 | client_note      | text        | mot de l'équipe (optionnel)                             |
 | delivered        | boolean     | projet livré ?                                          |
 | delivery_url     | text        | lien de livraison (Drive, WeTransfer…)                  |
-| estimated_delivery | date      | date de livraison estimée (visible client, optionnel)   |
+| estimated_delivery | date      | date de livraison estimée (optionnelle)                 |
+| show_estimated_delivery | boolean | montre-t-on cette date au client (page + email) ?    |
 | style            | text        | `prismae` (bleu), `studio` (or) ou `mariage` (ivoire) → choisit la page |
 | archived         | boolean     | projet archivé (masqué de la liste active)              |
 | view_count       | int         | nb de consultations du lien client                      |

@@ -123,6 +123,16 @@
     background:#3b9bff; box-shadow:0 0 8px #3b9bff;
   }
 
+  /* Confirmation d'enregistrement : elle doit sauter aux yeux, la barre d'actions
+     étant collée en bas de la fiche. Pastille colorée + petit rebond à l'apparition. */
+  .save-flash { animation:save-pop .45s cubic-bezier(.2,.8,.3,1.4); }
+  @keyframes save-pop {
+    0%   { transform:scale(.9); opacity:0; }
+    60%  { transform:scale(1.03); opacity:1; }
+    100% { transform:scale(1); opacity:1; }
+  }
+  @media (prefers-reduced-motion: reduce) { .save-flash { animation:none; } }
+
   /* ---- Visite guidée -------------------------------------------------------
      C'est un <dialog> modal, seul moyen de passer AU-DESSUS des fiches (elles
      aussi modales, donc en couche supérieure : aucun z-index n'y suffirait).
@@ -499,7 +509,7 @@ Livraison</textarea>
       <button id="d_deleteBtn" type="button" class="btn-ghost text-sm text-red-400">Supprimer</button>
       <button id="d_archiveBtn" type="button" class="btn-ghost text-sm">Archiver</button>
       <button id="d_duplicateBtn" type="button" class="btn-ghost text-sm">Dupliquer</button>
-      <p id="d_saveStatus" class="hidden flex-1 text-sm text-accent"></p>
+      <p id="d_saveStatus" class="hidden flex-1 text-sm"></p>
       <button id="d_saveBtn" type="button" class="btn-or ml-auto text-sm">Enregistrer</button>
     </div>
   </div>
@@ -938,7 +948,11 @@ $("createForm").addEventListener("submit", async (e) => {
    DÉTAIL / ÉDITION
    ========================================================================= */
 const detailDialog = $("detailDialog");
-let current = null;   // projet en cours d'édition
+let current = null;      // projet en cours d'édition (état À L'ÉCRAN, pas encore en base)
+// État réellement en base pour le projet ouvert. Sert à dire, avant et après
+// l'enregistrement, si le client va être (ou vient d'être) prévenu par email.
+let savedState = null;
+let saveStatusTimer = null;
 
 function renderDetail() {
   const p = current;
@@ -982,7 +996,30 @@ function renderDetail() {
   $("d_link").value = link;
   $("d_openLink").href = link;
   drawQR(link);
+  refreshSaveLabel();
 }
+
+// Le bouton annonce sa conséquence : « Enregistrer et prévenir » quand le clic
+// va déclencher un email au client. C'est la protection la plus utile contre
+// l'email parti par mégarde, sans imposer une confirmation à chaque étape.
+function pendingNotice() {
+  if (!savedState) return { avance: false, livre: false, recule: false, aEmail: false };
+  const steps = Array.isArray(current.steps) ? current.steps : [];
+  const cur = Math.min(Math.max(current.current_step || 0, 0), Math.max(steps.length - 1, 0));
+  return {
+    avance:  cur > savedState.current_step,
+    recule:  cur < savedState.current_step,
+    livre:   $("d_delivered").checked && !savedState.delivered,
+    aEmail:  !!$("d_email").value.trim(),
+  };
+}
+function refreshSaveLabel() {
+  const n = pendingNotice();
+  $("d_saveBtn").textContent = (n.aEmail && (n.avance || n.livre))
+    ? "Enregistrer et prévenir" : "Enregistrer";
+}
+$("d_delivered").addEventListener("change", refreshSaveLabel);
+$("d_email").addEventListener("input", refreshSaveLabel);
 
 // Export CSV de tous les projets (compatible Excel : BOM + séparateurs)
 function csvCell(v) { return '"' + (v == null ? "" : String(v)).replace(/"/g, '""') + '"'; }
@@ -1049,6 +1086,7 @@ async function loadStepHistory(projectId) {
 
 function openDetail(p) {
   current = { ...p };
+  savedState = { current_step: p.current_step || 0, delivered: p.delivered === true };
   renderDetail();
   loadViews(p.id);
   loadStepHistory(p.id);
@@ -1117,20 +1155,50 @@ $("d_saveBtn").addEventListener("click", async () => {
     delivery_url:  $("d_deliveryUrl").value.trim() || null,
     updated_at:    new Date().toISOString(),
   };
-  const { error } = await sb.from("projects").update(patch).eq("id", current.id);
-  const status = $("d_saveStatus");
-  status.classList.remove("hidden", "text-red-400", "text-accent");
-  if (error) {
-    status.textContent = "Échec : " + error.message;
-    status.classList.add("text-red-400");
-    return;
+  // Ce que cet enregistrement va déclencher, calculé AVANT d'écrire en base.
+  const notice = pendingNotice();
+
+  const btn = $("d_saveBtn"), label = btn.textContent;
+  btn.disabled = true; btn.textContent = "Enregistrement…"; btn.style.opacity = ".6";
+  let error;
+  try {
+    ({ error } = await sb.from("projects").update(patch).eq("id", current.id));
+  } catch (e) {
+    error = { message: "problème de réseau" };
+    console.error(e);
+  } finally {
+    btn.disabled = false; btn.textContent = label; btn.style.opacity = "";
   }
-  status.textContent = "Enregistré ✓";
-  status.classList.add("text-accent");
+
+  if (error) { showSaveStatus("Échec de l'enregistrement : " + error.message, false); return; }
+
+  // Le message dit ce qui est parti chez le client : c'est l'information qui
+  // manque le plus au moment où on relâche le bouton.
+  let msg = "Enregistré";
+  if (notice.livre)       msg += notice.aEmail ? " · email de livraison envoyé au client" : " · aucun email, ce projet n'a pas d'adresse client";
+  else if (notice.avance) msg += notice.aEmail ? " · le client a été prévenu de la nouvelle étape" : " · aucun email, ce projet n'a pas d'adresse client";
+  else if (notice.recule) msg += " · retour en arrière, le client n'a pas été prévenu";
+  showSaveStatus(msg, true);
+
   Object.assign(current, patch);
+  savedState = { current_step: patch.current_step, delivered: patch.delivered === true };
   renderDetail();   // rafraîchit le titre, le méta et la timeline affichés
   loadProjects();
 });
+
+// Pastille de confirmation : colorée, animée, et effacée au bout de 6 s pour ne
+// pas laisser un « Enregistré » périmé sous les yeux au prochain changement.
+function showSaveStatus(texte, ok) {
+  const s = $("d_saveStatus");
+  if (saveStatusTimer) clearTimeout(saveStatusTimer);
+  s.textContent = (ok ? "✓ " : "✕ ") + texte;
+  s.className = "flex-1 rounded-full border px-3 py-1.5 text-sm " + (ok
+    ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
+    : "border-red-400/40 bg-red-400/10 text-red-300");
+  void s.offsetWidth;          // force le recalcul, sinon l'animation ne rejoue pas
+  s.classList.add("save-flash");
+  if (ok) saveStatusTimer = setTimeout(() => s.classList.add("hidden"), 6000);
+}
 
 // Archiver / désarchiver
 $("d_archiveBtn").addEventListener("click", async () => {
@@ -1337,8 +1405,9 @@ function buildTourSteps() {
       inDetail: true,
       el: () => $("d_saveBtn"),
       title: "Toujours enregistrer",
-      text: "Rien de ce que tu modifies dans la fiche n'est envoyé tant que tu n'as pas cliqué sur "
-          + "« Enregistrer ». Y compris un changement d'étape.",
+      text: "Rien de ce que tu modifies n'est envoyé tant que tu n'as pas cliqué ici, changement "
+          + "d'étape compris. Quand le clic va prévenir le client, le bouton le dit : « Enregistrer "
+          + "et prévenir ». Et après coup, la pastille verte rappelle si un email est parti.",
     },
     {
       title: "C'est tout",

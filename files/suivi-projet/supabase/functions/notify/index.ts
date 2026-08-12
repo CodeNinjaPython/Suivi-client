@@ -2,6 +2,10 @@
 // Notifications client — Supabase Edge Function (Deno) — envoi via RESEND
 // Déclenchée par un Database Webhook sur UPDATE de la table `projects`.
 //
+// Trois déclencheurs, et trois seulement : une étape FRANCHIE VERS L'AVANT, un
+// projet marqué livré, un client qui vient de donner son email. Reculer d'une
+// étape ne déclenche rien : c'est une correction d'erreur, pas une nouvelle.
+//
 // L'email reprend la charte de la page client correspondante (colonne `style`) :
 //   prismae → bleu nuit / accent bleu électrique (suivi.html)
 //   studio  → noir cinéma / or (suivi-studio.html)
@@ -286,10 +290,13 @@ Deno.serve(async (req) => {
 
   const steps: string[] = Array.isArray(p.steps) ? p.steps : [];
   const justDelivered = p.delivered === true && old.delivered !== true;
-  const stepChanged = p.current_step !== old.current_step;
+  // On ne prévient QUE sur une avancée. Revenir en arrière est une correction
+  // d'erreur de l'admin : envoyer alors un « Nouvelle étape » annonçant une étape
+  // déjà passée sèmerait le doute chez le client. Le retour se fait en silence.
+  const stepForward = Number(p.current_step ?? 0) > Number(old.current_step ?? 0);
   // Le client vient de renseigner son email (porte email) → email de confirmation d'inscription.
   const justSubscribed = !old.client_email && !!p.client_email;
-  if (!justDelivered && !stepChanged && !justSubscribed) return new Response("no change", { status: 200 });
+  if (!justDelivered && !stepForward && !justSubscribed) return new Response("no change", { status: 200 });
 
   const SITE_URL = (Deno.env.get("SITE_URL") || "https://suivi-client.vercel.app").replace(/\/$/, "");
   const link = `${SITE_URL}/suivi.html?p=${encodeURIComponent(p.public_token)}`;

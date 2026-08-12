@@ -954,14 +954,21 @@ let current = null;      // projet en cours d'édition (état À L'ÉCRAN, pas e
 let savedState = null;
 let saveStatusTimer = null;
 
-function renderDetail() {
+// Le rendu de la fiche est coupé en deux À DESSEIN.
+//
+// `renderDetailChamps()` réécrit tous les champs depuis l'état en mémoire : il ne
+// doit être appelé QUE quand cet état fait autorité, c'est-à-dire à l'ouverture de
+// la fiche et au retour d'un enregistrement. L'appeler ailleurs efface ce qui a été
+// saisi sans être enregistré — c'est ce que faisait « Étape suivante ».
+//
+// `renderDetailEtat()` ne touche qu'à ce que l'étape courante fait bouger. C'est
+// le seul rendu que déclenche un changement d'étape.
+function renderDetailEtat() {
   const p = current;
   const steps = Array.isArray(p.steps) ? p.steps : [];
   const last = steps.length - 1;
   const cur = Math.min(p.current_step, last);
 
-  $("d_title").textContent = p.project_title;
-  $("d_meta").textContent = [p.client_name, p.project_type, p.event_date ? fmtDate(p.event_date) : ""].filter(Boolean).join("  ·  ");
   $("d_currentStep").textContent = p.delivered ? "Projet livré" : (steps[cur] || "—");
   $("d_stepCount").textContent = "Étape " + (cur + 1) + " / " + steps.length;
 
@@ -969,6 +976,16 @@ function renderDetail() {
   $("d_nextBtn").disabled = cur >= last;
   $("d_prevBtn").classList.toggle("opacity-40", cur <= 0);
   $("d_nextBtn").classList.toggle("opacity-40", cur >= last);
+
+  refreshSaveLabel();
+}
+
+function renderDetailChamps() {
+  const p = current;
+  const steps = Array.isArray(p.steps) ? p.steps : [];
+
+  $("d_title").textContent = p.project_title;
+  $("d_meta").textContent = [p.client_name, p.project_type, p.event_date ? fmtDate(p.event_date) : ""].filter(Boolean).join("  ·  ");
 
   // Champs d'édition complète
   $("d_title_in").value = p.project_title || "";
@@ -996,8 +1013,9 @@ function renderDetail() {
   $("d_link").value = link;
   $("d_openLink").href = link;
   drawQR(link);
-  refreshSaveLabel();
 }
+
+function renderDetail() { renderDetailChamps(); renderDetailEtat(); }
 
 // Le bouton annonce sa conséquence : « Enregistrer et prévenir » quand le clic
 // va déclencher un email au client. C'est la protection la plus utile contre
@@ -1125,7 +1143,7 @@ function moveStep(delta) {
   const sd = { ...(current.step_dates || {}) };
   if (delta > 0 && !sd[next]) sd[next] = todayISO();
   current.step_dates = sd;
-  renderDetail();
+  renderDetailEtat();   // surtout pas renderDetail() : il écraserait la saisie en cours
 }
 $("d_nextBtn").addEventListener("click", () => moveStep(1));
 $("d_prevBtn").addEventListener("click", () => moveStep(-1));
